@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { CANAL_PRESTAMOS, SEGUNDOS_RECORDATORIO } from '@/constants/biblioteca';
@@ -20,7 +21,7 @@ async function prepararCanal() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CANAL_PRESTAMOS, {
       name: 'Préstamos',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
   }
 }
