@@ -92,6 +92,21 @@ export const LIBROS: Libro[] = [
     anio: 1990,
     ejemplares: 1,
   },
+  // Libros con ISBN real (el de la contratapa), para probar el escáner.
+  {
+    isbn: '9780131103627',
+    titulo: 'The C Programming Language',
+    autor: 'Brian W. Kernighan y Dennis M. Ritchie',
+    anio: 1988,
+    ejemplares: 2,
+  },
+  {
+    isbn: '9781491952023',
+    titulo: 'JavaScript: The Definitive Guide',
+    autor: 'David Flanagan',
+    anio: 2020,
+    ejemplares: 0,
+  },
 ];
 
 // Personas que ya esperaban un libro al iniciar la app, en orden de llegada.
