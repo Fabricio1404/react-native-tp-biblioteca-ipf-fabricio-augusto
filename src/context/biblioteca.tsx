@@ -10,9 +10,11 @@ import { sumarDias } from '@/lib/fechas';
 import {
   avisarLibroEntregado,
   cancelarRecordatorio,
+  cancelarRecordatoriosHuerfanos,
   programarRecordatorio,
   puedeNotificar,
 } from '@/lib/notificaciones';
+import { guardarDatos, leerDatos } from '@/lib/persistencia';
 import type { Aviso, Libro, Prestamo } from '@/types';
 
 export type ResultadoReserva =
@@ -22,6 +24,9 @@ export type ResultadoReserva =
   | { tipo: 'inexistente' };
 
 export type ValorBiblioteca = {
+  // false mientras se leen los datos guardados al abrir la app.
+  listo: boolean;
+
   // Del más reciente al más antiguo, como máximo 3.
   recientes: Libro[];
   registrarVisto: (libro: Libro) => void;
@@ -55,12 +60,27 @@ export type ValorBiblioteca = {
 
 export const BibliotecaContext = createContext<ValorBiblioteca | null>(null);
 
-function crearEsperasIniciales(): Record<string, Cola<string>> {
+// Espera después del último cambio antes de guardar, para no escribir de más.
+const ESPERA_GUARDADO_MS = 400;
+
+function colasDesde(registro: Record<string, string[]>): Record<string, Cola<string>> {
   const esperas: Record<string, Cola<string>> = {};
-  for (const [isbn, personas] of Object.entries(COLAS_AL_ABRIR)) {
+  for (const [isbn, personas] of Object.entries(registro)) {
     esperas[isbn] = new Cola(personas);
   }
   return esperas;
+}
+
+function listasDesde(esperas: Record<string, Cola<string>>): Record<string, string[]> {
+  const registro: Record<string, string[]> = {};
+  for (const [isbn, cola] of Object.entries(esperas)) {
+    registro[isbn] = cola.aArray();
+  }
+  return registro;
+}
+
+function crearEsperasIniciales() {
+  return colasDesde(COLAS_AL_ABRIR);
 }
 
 type Props = {
@@ -76,6 +96,54 @@ export function BibliotecaProvider({ children }: Props) {
   // desde el mostrador: no salen del estante inicial, así que se suman aparte.
   const [devueltos, setDevueltos] = useState<Record<string, number>>({});
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [listo, setListo] = useState(false);
+
+  // Al abrir la app se recupera lo guardado. Mientras tanto `listo` es false y
+  // la navegación no se muestra, así la app nunca aparece "vacía" por un instante.
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargar() {
+      const datos = await leerDatos();
+      if (cancelado) {
+        return;
+      }
+      if (datos) {
+        setPrestamos(datos.prestamos);
+        setEsperas(colasDesde(datos.esperas));
+        setDevueltos(datos.devueltos);
+        const libros = datos.vistos.flatMap((isbn) => buscarPorIsbn(isbn) ?? []);
+        setVistos(new Pila(libros));
+      }
+      const idsVigentes = (datos?.prestamos ?? []).flatMap((p) => p.idNotificacion ?? []);
+      cancelarRecordatoriosHuerfanos(idsVigentes);
+      setListo(true);
+    }
+
+    cargar();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // Cada cambio se guarda. La sesión del personal y los avisos no se guardan:
+  // al volver a abrir la app hay que iniciar sesión de nuevo.
+  useEffect(() => {
+    if (!listo) {
+      return;
+    }
+    const temporizador = setTimeout(() => {
+      guardarDatos({
+        prestamos,
+        vistos: vistos.aArray().map((libro) => libro.isbn),
+        esperas: listasDesde(esperas),
+        devueltos,
+      });
+    }, ESPERA_GUARDADO_MS);
+
+    return () => clearTimeout(temporizador);
+  }, [listo, prestamos, vistos, esperas, devueltos]);
 
   // Copia de los préstamos para leer su valor actual después de un await.
   const prestamosActuales = useRef(prestamos);
@@ -253,6 +321,7 @@ export function BibliotecaProvider({ children }: Props) {
   return (
     <BibliotecaContext
       value={{
+        listo,
         recientes,
         registrarVisto,
         sesionIniciada,

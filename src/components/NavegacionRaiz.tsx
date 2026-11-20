@@ -1,11 +1,24 @@
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 
 import { Colores } from '@/constants/tema';
 import { useBiblioteca } from '@/hooks/useBiblioteca';
 
 // Stack raíz. Lee la sesión del Context para decidir qué rutas existen.
 export function NavegacionRaiz() {
-  const { sesionIniciada } = useBiblioteca();
+  const { sesionIniciada, listo } = useBiblioteca();
+
+  useEffect(() => {
+    if (listo) {
+      SplashScreen.hideAsync();
+    }
+  }, [listo]);
+
+  // Mientras se leen los datos guardados se sigue viendo el splash.
+  if (!listo) {
+    return null;
+  }
 
   return (
     <Stack
