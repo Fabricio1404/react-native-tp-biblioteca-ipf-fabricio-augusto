@@ -31,6 +31,8 @@ export type ValorBiblioteca = {
   // Posición (empezando en 1) de la persona usuaria, o null si no espera ese libro.
   miPosicion: (isbn: string) => number | null;
   tieneReserva: (isbn: string) => boolean;
+  // Libros en los que la persona usuaria está esperando, con su posición.
+  misEsperas: { isbn: string; posicion: number }[];
   reservar: (isbn: string) => ResultadoReserva;
   devolver: (isbn: string) => void;
   // Desencola a la persona del frente. Devuelve su nombre, o null si nadie esperaba.
@@ -173,6 +175,11 @@ export function BibliotecaProvider({ children }: Props) {
 
   const recientes = vistos.aArray().reverse().slice(0, CANTIDAD_RECIENTES);
 
+  const misEsperas = Object.entries(esperas).flatMap(([isbn, cola]) => {
+    const indice = cola.aArray().indexOf(YO);
+    return indice === -1 ? [] : [{ isbn, posicion: indice + 1 }];
+  });
+
   return (
     <BibliotecaContext
       value={{
@@ -186,6 +193,7 @@ export function BibliotecaProvider({ children }: Props) {
         enEspera,
         miPosicion,
         tieneReserva,
+        misEsperas,
         reservar,
         devolver,
         entregarAlSiguiente,
