@@ -1,5 +1,11 @@
 import { Stack } from 'expo-router';
 
+import { BibliotecaProvider } from '@/context/biblioteca';
+
 export default function LayoutRaiz() {
-  return <Stack />;
+  return (
+    <BibliotecaProvider>
+      <Stack />
+    </BibliotecaProvider>
+  );
 }
