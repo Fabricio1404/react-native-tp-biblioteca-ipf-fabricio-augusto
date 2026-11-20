@@ -1,6 +1,6 @@
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Boton } from '@/components/Boton';
@@ -8,8 +8,8 @@ import { Cargando } from '@/components/Cargando';
 import { EntradaIsbnManual } from '@/components/EntradaIsbnManual';
 import { TEXTOS_PERMISO } from '@/constants/permisos';
 import { Colores, Espaciado, Radio, TamanioTexto } from '@/constants/tema';
+import { useEscaner } from '@/hooks/useEscaner';
 import { usePermiso } from '@/hooks/usePermiso';
-import { buscarPorIsbn, esIsbnValido } from '@/lib/catalogo';
 
 const ALTO_CAMARA = 320;
 
@@ -20,12 +20,7 @@ function abrirPermisoCamara() {
 export default function Escanear() {
   const [permiso, , consultarPermiso] = useCameraPermissions();
   const estado = usePermiso(permiso, consultarPermiso);
-  const [aviso, setAviso] = useState<string | null>(null);
-
-  // useRef y no useState: onBarcodeScanned se llama muchas veces por segundo y
-  // necesita ver el cambio en la misma llamada siguiente, sin esperar un render.
-  const navegando = useRef(false);
-  const ultimoDesconocido = useRef<string | null>(null);
+  const { aviso, alEscanear, abrirManual } = useEscaner();
   const previaMostrada = useRef(false);
 
   // La primera vez, antes del diálogo del sistema, se explica para qué es la cámara.
@@ -35,38 +30,6 @@ export default function Escanear() {
       abrirPermisoCamara();
     }
   }, [estado]);
-
-  function abrirLibro(isbn: string) {
-    navegando.current = true;
-    // replace: al tocar "atrás" desde el detalle se vuelve al Catálogo, no al escáner.
-    router.replace({ pathname: '/libro/[isbn]', params: { isbn } });
-  }
-
-  function alEscanear({ data }: BarcodeScanningResult) {
-    if (navegando.current || !esIsbnValido(data)) {
-      return;
-    }
-    if (buscarPorIsbn(data)) {
-      abrirLibro(data);
-      return;
-    }
-    // El mismo código sigue frente a la cámara: no repetir el aviso.
-    if (ultimoDesconocido.current === data) {
-      return;
-    }
-    ultimoDesconocido.current = data;
-    setAviso(`El código ${data} no está en el catálogo. Probá con otro libro o escribí el ISBN.`);
-  }
-
-  function abrirManual(isbn: string) {
-    if (!esIsbnValido(isbn)) {
-      setAviso('El ISBN tiene que tener 13 números, sin guiones ni espacios.');
-    } else if (!buscarPorIsbn(isbn)) {
-      setAviso(`No tenemos el ISBN ${isbn} en el catálogo.`);
-    } else {
-      abrirLibro(isbn);
-    }
-  }
 
   return (
     <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
