@@ -1,4 +1,4 @@
-import { createContext, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { CANTIDAD_RECIENTES, DIAS_PRESTAMO, YO } from '@/constants/biblioteca';
 import { CLAVE_PERSONAL, USUARIO_PERSONAL } from '@/constants/personal';
@@ -7,6 +7,12 @@ import { Cola } from '@/estructuras/cola';
 import { Pila } from '@/estructuras/pila';
 import { buscarPorIsbn } from '@/lib/catalogo';
 import { sumarDias } from '@/lib/fechas';
+import {
+  avisarLibroEntregado,
+  cancelarRecordatorio,
+  programarRecordatorio,
+  puedeNotificar,
+} from '@/lib/notificaciones';
 import type { Aviso, Libro, Prestamo } from '@/types';
 
 export type ResultadoReserva =
@@ -37,6 +43,9 @@ export type ValorBiblioteca = {
   conEspera: string[];
   reservar: (isbn: string) => ResultadoReserva;
   devolver: (isbn: string) => void;
+  // Programa la notificación de devolución (el permiso ya tiene que estar concedido).
+  activarRecordatorio: (isbn: string) => Promise<void>;
+  desactivarRecordatorio: (isbn: string) => void;
   // Desencola a la persona del frente. Devuelve su nombre, o null si nadie esperaba.
   entregarAlSiguiente: (isbn: string) => string | null;
 
@@ -67,6 +76,12 @@ export function BibliotecaProvider({ children }: Props) {
   // desde el mostrador: no salen del estante inicial, así que se suman aparte.
   const [devueltos, setDevueltos] = useState<Record<string, number>>({});
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+
+  // Copia de los préstamos para leer su valor actual después de un await.
+  const prestamosActuales = useRef(prestamos);
+  useEffect(() => {
+    prestamosActuales.current = prestamos;
+  }, [prestamos]);
 
   // Nunca se modifica la pila o la cola guardada en el estado: se crea una
   // nueva para que React detecte el cambio y vuelva a renderizar.
@@ -146,7 +161,44 @@ export function BibliotecaProvider({ children }: Props) {
   }
 
   function devolver(isbn: string) {
+    // Si había un recordatorio programado, se cancela: el libro ya no está prestado.
+    const id = prestamos.find((p) => p.isbn === isbn)?.idNotificacion;
+    if (id) {
+      cancelarRecordatorio(id);
+    }
     setPrestamos((anteriores) => anteriores.filter((p) => p.isbn !== isbn));
+  }
+
+  function actualizarPrestamo(isbn: string, cambios: Partial<Prestamo>) {
+    setPrestamos((anteriores) =>
+      anteriores.map((p) => (p.isbn === isbn ? { ...p, ...cambios } : p)),
+    );
+  }
+
+  async function activarRecordatorio(isbn: string) {
+    actualizarPrestamo(isbn, { recordatorio: true });
+    const titulo = buscarPorIsbn(isbn)?.titulo ?? isbn;
+    try {
+      const id = await programarRecordatorio(titulo);
+      // Mientras se programaba, la persona pudo desactivar el interruptor o devolver el libro.
+      const actual = prestamosActuales.current.find((p) => p.isbn === isbn);
+      if (!actual?.recordatorio) {
+        cancelarRecordatorio(id);
+        return;
+      }
+      actualizarPrestamo(isbn, { idNotificacion: id });
+    } catch {
+      actualizarPrestamo(isbn, { recordatorio: false, idNotificacion: null });
+      agregarAviso('No pudimos programar el recordatorio. Intentá activarlo de nuevo.');
+    }
+  }
+
+  function desactivarRecordatorio(isbn: string) {
+    const id = prestamos.find((p) => p.isbn === isbn)?.idNotificacion;
+    if (id) {
+      cancelarRecordatorio(id);
+    }
+    actualizarPrestamo(isbn, { recordatorio: false, idNotificacion: null });
   }
 
   function agregarAviso(mensaje: string) {
@@ -169,10 +221,22 @@ export function BibliotecaProvider({ children }: Props) {
     if (persona === YO) {
       setDevueltos((anteriores) => ({ ...anteriores, [isbn]: (anteriores[isbn] ?? 0) + 1 }));
       setPrestamos((anteriores) => [...anteriores, crearPrestamo(isbn)]);
-      const titulo = buscarPorIsbn(isbn)?.titulo ?? 'el libro que esperabas';
-      agregarAviso(`¡Ya podés retirar "${titulo}"! Lo tenés en tus préstamos.`);
+      avisarEntrega(buscarPorIsbn(isbn)?.titulo ?? 'el libro que esperabas');
     }
     return persona;
+  }
+
+  // Si el permiso está concedido llega una notificación; si no, un aviso dentro de la app.
+  async function avisarEntrega(titulo: string) {
+    try {
+      if (await puedeNotificar()) {
+        await avisarLibroEntregado(titulo);
+        return;
+      }
+    } catch {
+      // Si la notificación falla, se avisa dentro de la app.
+    }
+    agregarAviso(`¡Ya podés retirar "${titulo}"! Lo tenés en tus préstamos.`);
   }
 
   const recientes = vistos.aArray().reverse().slice(0, CANTIDAD_RECIENTES);
@@ -203,6 +267,8 @@ export function BibliotecaProvider({ children }: Props) {
         conEspera,
         reservar,
         devolver,
+        activarRecordatorio,
+        desactivarRecordatorio,
         entregarAlSiguiente,
         avisos,
         descartarAviso,

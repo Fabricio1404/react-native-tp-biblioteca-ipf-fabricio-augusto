@@ -1,5 +1,8 @@
 import { NavegacionRaiz } from '@/components/NavegacionRaiz';
 import { BibliotecaProvider } from '@/context/biblioteca';
+import { configurarNotificaciones } from '@/lib/notificaciones';
+
+configurarNotificaciones();
 
 // Si la app se abre con un deep link (por ejemplo a /buscar),
 // las pestañas quedan debajo en la pila para poder volver.
