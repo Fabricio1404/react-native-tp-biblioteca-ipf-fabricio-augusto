@@ -6,6 +6,7 @@ import { Cargando } from '@/components/Cargando';
 import { FilaLibro } from '@/components/FilaLibro';
 import { ListaVacia } from '@/components/ListaVacia';
 import { MensajeError } from '@/components/MensajeError';
+import { TituloSeccion } from '@/components/TituloSeccion';
 import { VistosRecientemente } from '@/components/VistosRecientemente';
 import { Espaciado } from '@/constants/tema';
 import { useLibros } from '@/hooks/useLibros';
@@ -27,6 +28,7 @@ export default function Catalogo() {
         <View style={styles.encabezado}>
           <VistosRecientemente onAbrir={abrirLibro} />
           <AccesosCatalogo />
+          <TituloSeccion>Todos los libros</TituloSeccion>
         </View>
       }
       ListEmptyComponent={

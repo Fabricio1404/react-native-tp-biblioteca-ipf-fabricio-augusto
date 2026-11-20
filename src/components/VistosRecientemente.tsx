@@ -1,6 +1,15 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AREA_TACTIL_MINIMA, Colores, Espaciado, Radio, TamanioTexto } from '@/constants/tema';
+import { TituloSeccion } from '@/components/TituloSeccion';
+import {
+  AREA_TACTIL_MINIMA,
+  Colores,
+  Espaciado,
+  Radio,
+  TamanioIcono,
+  TamanioTexto,
+} from '@/constants/tema';
 import { useBiblioteca } from '@/hooks/useBiblioteca';
 
 type Props = {
@@ -12,7 +21,7 @@ export function VistosRecientemente({ onAbrir }: Props) {
 
   return (
     <View style={styles.seccion}>
-      <Text style={styles.titulo}>Vistos recientemente</Text>
+      <TituloSeccion>Vistos recientemente</TituloSeccion>
       {recientes.length === 0 ? (
         <Text style={styles.vacio}>Todavía no abriste ningún libro.</Text>
       ) : (
@@ -23,10 +32,10 @@ export function VistosRecientemente({ onAbrir }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Abrir ${libro.titulo}`}
               onPress={() => onAbrir(libro.isbn)}
-              style={({ pressed }) => [styles.chip, pressed && styles.presionado]}>
-              <Text style={styles.textoChip} numberOfLines={2}>
-                {libro.titulo}
-              </Text>
+              style={({ pressed }) => [styles.item, pressed && styles.presionado]}>
+              <Ionicons name="time-outline" size={TamanioIcono.chico} color={Colores.primario} />
+              <Text style={styles.texto}>{libro.titulo}</Text>
+              <Ionicons name="chevron-forward" size={TamanioIcono.chico} color={Colores.primario} />
             </Pressable>
           ))}
         </View>
@@ -39,32 +48,30 @@ const styles = StyleSheet.create({
   seccion: {
     gap: Espaciado.sm,
   },
-  titulo: {
-    fontSize: TamanioTexto.grande,
-    fontWeight: '700',
-    color: Colores.primario,
-  },
   vacio: {
     fontSize: TamanioTexto.chico,
     color: Colores.textoSecundario,
   },
   lista: {
-    flexDirection: 'row',
-    gap: Espaciado.sm,
+    gap: Espaciado.xs,
   },
-  chip: {
-    flex: 1,
+  item: {
     minHeight: AREA_TACTIL_MINIMA,
-    justifyContent: 'center',
-    padding: Espaciado.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Espaciado.sm,
+    paddingHorizontal: Espaciado.md,
+    paddingVertical: Espaciado.sm,
     borderRadius: Radio.medio,
     backgroundColor: Colores.primarioSuave,
   },
   presionado: {
     opacity: 0.8,
   },
-  textoChip: {
-    fontSize: TamanioTexto.chico,
+  texto: {
+    flex: 1,
+    flexShrink: 1,
+    fontSize: TamanioTexto.normal,
     fontWeight: '600',
     color: Colores.primario,
   },

@@ -33,10 +33,10 @@ export function FilaLibro({ libro, onPress }: Props) {
         <Text style={styles.autor}>
           {libro.autor} · {libro.anio}
         </Text>
+        <Text style={[styles.estado, hay ? styles.disponible : styles.agotado]}>
+          {hay ? `${cantidad} disponible${cantidad === 1 ? '' : 's'}` : 'Sin ejemplares'}
+        </Text>
       </View>
-      <Text style={[styles.estado, hay ? styles.disponible : styles.agotado]}>
-        {hay ? `${cantidad} disponible${cantidad === 1 ? '' : 's'}` : 'Sin ejemplares'}
-      </Text>
       <Ionicons name="chevron-forward" size={TamanioIcono.chico} color={Colores.textoSecundario} />
     </Pressable>
   );
@@ -59,6 +59,8 @@ const styles = StyleSheet.create({
   },
   textos: {
     flex: 1,
+    flexShrink: 1,
+    alignItems: 'flex-start',
     gap: Espaciado.xs,
   },
   titulo: {
@@ -71,9 +73,10 @@ const styles = StyleSheet.create({
     color: Colores.textoSecundario,
   },
   estado: {
+    marginTop: Espaciado.xs,
     fontSize: TamanioTexto.chico,
     fontWeight: '700',
-    paddingVertical: Espaciado.xs,
+    paddingVertical: Espaciado.xs / 2,
     paddingHorizontal: Espaciado.sm,
     borderRadius: Radio.completo,
     overflow: 'hidden',

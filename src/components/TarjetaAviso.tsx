@@ -36,6 +36,7 @@ const styles = StyleSheet.create({
   },
   mensaje: {
     flex: 1,
+    flexShrink: 1,
     fontSize: TamanioTexto.normal,
     fontWeight: '600',
     color: Colores.texto,

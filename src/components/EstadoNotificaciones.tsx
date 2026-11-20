@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
   },
   texto: {
     flex: 1,
+    flexShrink: 1,
     fontSize: TamanioTexto.chico,
     color: Colores.textoSecundario,
   },

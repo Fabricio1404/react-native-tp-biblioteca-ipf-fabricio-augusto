@@ -26,6 +26,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colores.borde,
   },
   etiqueta: {
+    flexShrink: 1,
     fontSize: TamanioTexto.normal,
     color: Colores.textoSecundario,
   },
