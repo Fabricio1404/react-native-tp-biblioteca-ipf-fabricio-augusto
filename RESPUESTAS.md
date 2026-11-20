@@ -385,7 +385,7 @@ La única dependencia "lateral" a revisar es `constants/permisos.ts`, que import
 
 1. `src/lib/api.ts`: `fetch` en lugar de la simulación.
 2. `src/lib/catalogo.ts`: `buscarPorIsbn` lee `LIBROS` en forma sincrónica.
-3. `src/data/libros.ts`: dejaría de existir, o quedaría solo `ESPERA_INICIAL`.
+3. `src/data/libros.ts`: dejaría de existir, o quedaría solo `COLAS_AL_ABRIR`.
 4. Las pantallas que buscan un libro por ISBN en forma sincrónica (detalle, reserva, `ItemPrestamo`, `ItemEspera`, `ItemMostrador`) y `disponibles()` en el Context: pasarían a esperar datos y necesitarían estados de carga y error.
 
 Son más de dos archivos. Eso dice que la búsqueda por ISBN quedó acoplada a que los datos estén en memoria al instante. Una mejora sería tener una sola fuente del catálogo (por ejemplo, guardar en el Context lo que trae `useLibros` y un hook `useLibro(isbn)`), así el cambio quedaría en `api.ts` y en ese hook.

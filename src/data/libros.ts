@@ -110,7 +110,7 @@ export const LIBROS: Libro[] = [
 ];
 
 // Personas que ya esperaban un libro al iniciar la app, en orden de llegada.
-export const ESPERA_INICIAL: Record<string, string[]> = {
-  '9789870001034': ['Lucía Benítez', 'Martín Gómez'],
-  '9789870001102': ['Sofía Ramírez'],
+export const COLAS_AL_ABRIR: Record<string, string[]> = {
+  '9789870001034': ['Valentina Ojeda', 'Tomás Villalba'],
+  '9789870001102': ['Camila Duarte'],
 };

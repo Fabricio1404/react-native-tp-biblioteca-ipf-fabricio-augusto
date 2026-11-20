@@ -2,7 +2,7 @@ import { createContext, useEffect, useRef, useState, type ReactNode } from 'reac
 
 import { CANTIDAD_RECIENTES, DIAS_PRESTAMO, YO } from '@/constants/biblioteca';
 import { CLAVE_PERSONAL, USUARIO_PERSONAL } from '@/constants/personal';
-import { ESPERA_INICIAL } from '@/data/libros';
+import { COLAS_AL_ABRIR } from '@/data/libros';
 import { Cola } from '@/estructuras/cola';
 import { Pila } from '@/estructuras/pila';
 import { buscarPorIsbn } from '@/lib/catalogo';
@@ -57,7 +57,7 @@ export const BibliotecaContext = createContext<ValorBiblioteca | null>(null);
 
 function crearEsperasIniciales(): Record<string, Cola<string>> {
   const esperas: Record<string, Cola<string>> = {};
-  for (const [isbn, personas] of Object.entries(ESPERA_INICIAL)) {
+  for (const [isbn, personas] of Object.entries(COLAS_AL_ABRIR)) {
     esperas[isbn] = new Cola(personas);
   }
   return esperas;
