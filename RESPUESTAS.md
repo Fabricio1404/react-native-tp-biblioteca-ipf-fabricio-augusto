@@ -311,6 +311,7 @@ import { Cargando } from '@/components/Cargando';
 import { FilaLibro } from '@/components/FilaLibro';
 import { ListaVacia } from '@/components/ListaVacia';
 import { MensajeError } from '@/components/MensajeError';
+import { TituloSeccion } from '@/components/TituloSeccion';
 import { VistosRecientemente } from '@/components/VistosRecientemente';
 import { Espaciado } from '@/constants/tema';
 import { useLibros } from '@/hooks/useLibros';
@@ -332,6 +333,7 @@ export default function Catalogo() {
         <View style={styles.encabezado}>
           <VistosRecientemente onAbrir={abrirLibro} />
           <AccesosCatalogo />
+          <TituloSeccion>Todos los libros</TituloSeccion>
         </View>
       }
       ListEmptyComponent={
@@ -398,14 +400,14 @@ Son más de dos archivos. Eso dice que la búsqueda por ISBN quedó acoplada a q
 
 | Situación | Qué ve la persona | Dónde se maneja |
 | --------- | ----------------- | --------------- |
-| `obtenerLibros()` falla | "No pudimos cargar el catálogo. Revisá tu conexión e intentá de nuevo." con botón "Reintentar" | `src/hooks/useLibros.ts:33-36`, `src/app/(tabs)/(catalogo)/index.tsx:32-40` |
+| `obtenerLibros()` falla | "No pudimos cargar el catálogo. Revisá tu conexión e intentá de nuevo." con botón "Reintentar" | `src/hooks/useLibros.ts:33-36`, `src/app/(tabs)/(catalogo)/index.tsx:34-42` |
 | Se abre `/libro/abc` | "abc no es un ISBN válido. Un ISBN tiene 13 números, sin guiones." con "Ir al Catálogo" | `src/app/(tabs)/(catalogo)/libro/[isbn].tsx:18, 27-36` |
 | Se escanea un ISBN que no está en el catálogo | Aviso "El código … no está en el catálogo…", una sola vez, y la cámara sigue activa | `src/app/(tabs)/(catalogo)/escanear.tsx:53-58` |
 | La cámara está bloqueada | Mensaje de cámara desactivada, "Abrir Ajustes" y el campo para escribir el ISBN | `escanear.tsx:92-102, 115`; `src/lib/permisos.ts:20` |
 | Las notificaciones están denegadas | En "Mis reservas", "Notificaciones desactivadas: los avisos te aparecen acá…"; los avisos de entrega aparecen como tarjetas dentro de la app | `src/context/biblioteca.tsx:229-240`; `src/components/ItemPrestamo.tsx:21-33`; `src/components/EstadoNotificaciones.tsx` |
-| Se intenta reservar un libro ya reservado | El detalle muestra "Ver mis reservas" en lugar de "Reservar"; si se llega al modal, "Ya reservaste este libro…" | `libro/[isbn].tsx:74-82`; `src/app/reservar/[isbn].tsx:23-33`; `biblioteca.tsx:149-151` |
+| Se intenta reservar un libro ya reservado | El detalle muestra "Ver mis reservas" en lugar de "Reservar"; si se llega al modal, "Ya reservaste este libro…" | `libro/[isbn].tsx:74-89`; `src/app/reservar/[isbn].tsx:23-33`; `biblioteca.tsx:149-151` |
 | "Entregar al siguiente" con la lista vacía | Los libros sin espera no aparecen en el mostrador; si igual pasara, "Nadie está esperando …" | `src/app/mostrador.tsx:20-22`; `biblioteca.tsx:213-218` (la `Cola` devuelve `undefined` sin romperse) |
-| Login con clave incorrecta | "Usuario o clave incorrectos. Revisalos e intentá de nuevo." | `src/app/login.tsx:18-19`; `biblioteca.tsx:99-106` |
+| Login con clave incorrecta | "Usuario o clave incorrectos. Revisalos e intentá de nuevo." | `src/app/login.tsx:29-30`; `biblioteca.tsx:99-106` |
 
 ### E4. Decisiones con argumentos
 
