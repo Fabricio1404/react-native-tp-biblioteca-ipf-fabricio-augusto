@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Boton } from '@/components/Boton';
@@ -15,9 +15,12 @@ export function SinResultado({ mensaje }: Props) {
   return (
     <View style={styles.contenedor}>
       <ListaVacia mensaje={mensaje} icono="help-circle-outline" />
-      <Link href={RUTA_CATALOGO} asChild>
-        <Boton titulo="Ir al Catálogo" icono="library" />
-      </Link>
+      <Boton
+        titulo="Ir al Catálogo"
+        icono="library"
+        accessibilityRole="link"
+        onPress={() => router.navigate(RUTA_CATALOGO)}
+      />
     </View>
   );
 }

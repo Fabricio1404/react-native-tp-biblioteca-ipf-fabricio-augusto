@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Boton } from '@/components/Boton';
@@ -8,14 +8,20 @@ export function AccesosCatalogo() {
   return (
     <View style={styles.fila}>
       <View style={styles.celda}>
-        <Link href="/buscar" asChild>
-          <Boton titulo="Buscar" icono="search" variante="secundario" />
-        </Link>
+        <Boton
+          titulo="Buscar"
+          icono="search"
+          variante="secundario"
+          onPress={() => router.push('/buscar')}
+        />
       </View>
       <View style={styles.celda}>
-        <Link href="/escanear" asChild>
-          <Boton titulo="Escanear" icono="barcode" variante="secundario" />
-        </Link>
+        <Boton
+          titulo="Escanear"
+          icono="barcode"
+          variante="secundario"
+          onPress={() => router.push('/escanear')}
+        />
       </View>
     </View>
   );

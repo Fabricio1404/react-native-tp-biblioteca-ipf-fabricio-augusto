@@ -25,11 +25,20 @@ const COLOR_TEXTO: Record<Variante, string> = {
   peligro: Colores.peligro,
 };
 
-// Reenvía el resto de las props a Pressable, así funciona dentro de <Link asChild>.
-export function Boton({ titulo, variante = 'primario', icono, disabled, ...resto }: Props) {
+// Para navegar se usa onPress con router (no <Link asChild>): así el botón
+// conserva siempre su estilo, también en la versión web.
+export function Boton({
+  titulo,
+  variante = 'primario',
+  icono,
+  disabled,
+  accessibilityRole = 'button',
+  ...resto
+}: Props) {
   return (
     <Pressable
-      accessibilityRole="button"
+      {...resto}
+      accessibilityRole={accessibilityRole}
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       style={({ pressed }) => [
@@ -37,8 +46,7 @@ export function Boton({ titulo, variante = 'primario', icono, disabled, ...resto
         styles[variante],
         pressed && styles.presionado,
         disabled && styles.deshabilitado,
-      ]}
-      {...resto}>
+      ]}>
       {icono && <Ionicons name={icono} size={TamanioIcono.chico} color={COLOR_TEXTO[variante]} />}
       <Text style={[styles.texto, textos[variante]]}>{titulo}</Text>
     </Pressable>
@@ -73,8 +81,10 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   texto: {
+    flexShrink: 1,
     fontSize: TamanioTexto.normal,
     fontWeight: '700',
+    textAlign: 'center',
   },
 });
 

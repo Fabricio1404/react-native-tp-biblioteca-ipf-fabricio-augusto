@@ -1,4 +1,4 @@
-import { Link, Stack, usePathname } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Boton } from '@/components/Boton';
@@ -14,9 +14,12 @@ export default function NoEncontrada() {
       <Text style={styles.codigo}>404</Text>
       <Text style={styles.texto}>No existe ninguna pantalla para esta dirección:</Text>
       <Text style={styles.ruta}>{ruta}</Text>
-      <Link href={RUTA_CATALOGO} asChild>
-        <Boton titulo="Ir al Catálogo" icono="library" />
-      </Link>
+      <Boton
+        titulo="Ir al Catálogo"
+        icono="library"
+        accessibilityRole="link"
+        onPress={() => router.navigate(RUTA_CATALOGO)}
+      />
     </View>
   );
 }

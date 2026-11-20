@@ -1,4 +1,4 @@
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -72,13 +72,20 @@ export default function DetalleLibro() {
       )}
 
       {prestamo || posicion !== null ? (
-        <Link href="/reservas" asChild>
-          <Boton titulo="Ver mis reservas" icono="bookmarks" variante="secundario" />
-        </Link>
+        <Boton
+          titulo="Ver mis reservas"
+          icono="bookmarks"
+          variante="secundario"
+          onPress={() => router.navigate('/reservas')}
+        />
       ) : (
-        <Link href={{ pathname: '/reservar/[isbn]', params: { isbn: libro.isbn } }} asChild>
-          <Boton titulo="Reservar" icono="bookmark" />
-        </Link>
+        <Boton
+          titulo="Reservar"
+          icono="bookmark"
+          onPress={() =>
+            router.push({ pathname: '/reservar/[isbn]', params: { isbn: libro.isbn } })
+          }
+        />
       )}
     </ScrollView>
   );
