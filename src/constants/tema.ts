@@ -1,14 +1,18 @@
+// Paleta basada en el escudo del Instituto Politécnico Formosa.
 export const Colores = {
-  primario: '#1E3A8A',
-  primarioSuave: '#DBEAFE',
-  textoSobrePrimario: '#FFFFFF',
-  fondo: '#F1F5F9',
+  primario: '#08383F', // petróleo del escudo
+  primarioSuave: '#E3EEEF',
+  acento: '#078654', // verde de la P
+  acentoSuave: '#DDF2E7',
+  crema: '#FCEFD5', // letras, borde y estrellas del escudo
+  textoSobrePrimario: '#FCEFD5',
+  fondo: '#F8F6F0',
   superficie: '#FFFFFF',
-  borde: '#E2E8F0',
-  texto: '#0F172A',
-  textoSecundario: '#475569',
-  exito: '#047857',
-  exitoSuave: '#D1FAE5',
+  borde: '#E2E2DA',
+  texto: '#0B2A2F',
+  textoSecundario: '#4A5F63',
+  exito: '#078654',
+  exitoSuave: '#DDF2E7',
   alerta: '#B45309',
   alertaSuave: '#FEF3C7',
   peligro: '#B91C1C',
