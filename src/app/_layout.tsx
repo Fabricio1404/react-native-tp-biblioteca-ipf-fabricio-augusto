@@ -20,6 +20,7 @@ export default function LayoutRaiz() {
           headerBackButtonDisplayMode: 'minimal',
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="buscar" options={{ title: 'Buscar' }} />
       </Stack>
     </BibliotecaProvider>
   );

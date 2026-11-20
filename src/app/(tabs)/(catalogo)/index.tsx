@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { FlatList, StyleSheet, View } from 'react-native';
 
+import { AccesosCatalogo } from '@/components/AccesosCatalogo';
 import { Cargando } from '@/components/Cargando';
 import { FilaLibro } from '@/components/FilaLibro';
 import { ListaVacia } from '@/components/ListaVacia';
@@ -25,6 +26,7 @@ export default function Catalogo() {
       ListHeaderComponent={
         <View style={styles.encabezado}>
           <VistosRecientemente onAbrir={abrirLibro} />
+          <AccesosCatalogo />
         </View>
       }
       ListEmptyComponent={
