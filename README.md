@@ -152,7 +152,7 @@ Esquema: `bibliotecaipf://`. En Expo Go se usa la URL equivalente `exp://<IP de 
 | `bibliotecaipf://libro/9789870001010`      | Detalle de *Ficciones*                               |
 | `bibliotecaipf://libro/123`                | Mensaje de ISBN inválido con link al Catálogo        |
 | `bibliotecaipf://buscar?q=borges`          | Buscador con "borges" cargado, las pestañas debajo   |
-| `bibliotecaipf://mostrador`                | Sin sesión, la ruta no existe: pantalla 404          |
+| `bibliotecaipf://mostrador`                | Sin sesión no se abre el mostrador: esa ruta no existe |
 | `bibliotecaipf://reserva`                  | Redirige a `/reservas`                               |
 | `bibliotecaipf://escanear`                 | Escáner (con la cámara bloqueada: "Abrir Ajustes" e ISBN a mano) |
 
