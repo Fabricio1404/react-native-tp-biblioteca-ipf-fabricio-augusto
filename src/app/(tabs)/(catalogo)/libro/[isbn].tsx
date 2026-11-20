@@ -1,7 +1,8 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Boton } from '@/components/Boton';
 import { DatoLibro } from '@/components/DatoLibro';
 import { SinResultado } from '@/components/SinResultado';
 import { Colores, Espaciado, Radio, TamanioTexto } from '@/constants/tema';
@@ -68,6 +69,16 @@ export default function DetalleLibro() {
       )}
       {posicion !== null && (
         <Text style={styles.estado}>Estás en la lista de espera, en la posición {posicion}.</Text>
+      )}
+
+      {prestamo || posicion !== null ? (
+        <Link href="/reservas" asChild>
+          <Boton titulo="Ver mis reservas" icono="bookmarks" variante="secundario" />
+        </Link>
+      ) : (
+        <Link href={{ pathname: '/reservar/[isbn]', params: { isbn: libro.isbn } }} asChild>
+          <Boton titulo="Reservar" icono="bookmark" />
+        </Link>
       )}
     </ScrollView>
   );

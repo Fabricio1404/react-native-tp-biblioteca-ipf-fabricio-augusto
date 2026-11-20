@@ -21,6 +21,10 @@ export default function LayoutRaiz() {
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="buscar" options={{ title: 'Buscar' }} />
+        <Stack.Screen
+          name="reservar/[isbn]"
+          options={{ title: 'Confirmar reserva', presentation: 'modal' }}
+        />
       </Stack>
     </BibliotecaProvider>
   );
