@@ -62,6 +62,22 @@ export function cancelarRecordatorio(id: string) {
   return Notifications.cancelScheduledNotificationAsync(id);
 }
 
+// Al abrir la app se cancelan las notificaciones programadas que ya no
+// corresponden a ningún préstamo guardado (por ejemplo, de un libro devuelto
+// justo antes de que se cerrara la app).
+export async function cancelarRecordatoriosHuerfanos(idsVigentes: string[]) {
+  try {
+    const programadas = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      programadas
+        .filter((n) => !idsVigentes.includes(n.identifier))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+  } catch {
+    // Si no se pueden revisar, no se cancela nada.
+  }
+}
+
 export async function avisarLibroEntregado(titulo: string) {
   await prepararCanal();
   await Notifications.scheduleNotificationAsync({
