@@ -35,6 +35,11 @@ export const TamanioTexto = {
   grande: 17,
   titulo: 22,
   tituloGrande: 28,
+  gigante: 72,
+} as const;
+
+export const Interlineado = {
+  normal: 22,
 } as const;
 
 export const Radio = {

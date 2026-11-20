@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Boton } from '@/components/Boton';
 import { SinResultado } from '@/components/SinResultado';
 import { DIAS_PRESTAMO } from '@/constants/biblioteca';
-import { Colores, Espaciado, Radio, TamanioTexto } from '@/constants/tema';
+import { Colores, Espaciado, Interlineado, Radio, TamanioTexto } from '@/constants/tema';
 import { useBiblioteca } from '@/hooks/useBiblioteca';
 import { buscarPorIsbn, esIsbnValido } from '@/lib/catalogo';
 import { formatearFecha, sumarDias } from '@/lib/fechas';
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   textoCaja: {
     fontSize: TamanioTexto.normal,
     color: Colores.texto,
-    lineHeight: 22,
+    lineHeight: Interlineado.normal,
   },
   aviso: {
     fontSize: TamanioTexto.normal,
