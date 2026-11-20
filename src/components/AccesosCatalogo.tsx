@@ -12,6 +12,11 @@ export function AccesosCatalogo() {
           <Boton titulo="Buscar" icono="search" variante="secundario" />
         </Link>
       </View>
+      <View style={styles.celda}>
+        <Link href="/escanear" asChild>
+          <Boton titulo="Escanear" icono="barcode" variante="secundario" />
+        </Link>
+      </View>
     </View>
   );
 }

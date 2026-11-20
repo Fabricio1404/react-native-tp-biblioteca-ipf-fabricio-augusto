@@ -16,6 +16,7 @@ export default function LayoutCatalogo() {
         name="index"
         options={{ title: 'Catálogo', headerRight: () => <EnlacePersonal /> }}
       />
+      <Stack.Screen name="escanear" options={{ title: 'Escanear' }} />
     </Stack>
   );
 }
