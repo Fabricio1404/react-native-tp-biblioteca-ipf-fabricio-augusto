@@ -1,10 +1,9 @@
 import { createContext, useState, type ReactNode } from 'react';
 
+import { CANTIDAD_RECIENTES } from '@/constants/biblioteca';
 import { CLAVE_PERSONAL, USUARIO_PERSONAL } from '@/constants/personal';
 import { Pila } from '@/estructuras/pila';
 import type { Libro } from '@/types';
-
-const CANTIDAD_RECIENTES = 3;
 
 export type ValorBiblioteca = {
   // Del más reciente al más antiguo, como máximo 3.
