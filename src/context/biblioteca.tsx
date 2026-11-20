@@ -33,6 +33,8 @@ export type ValorBiblioteca = {
   tieneReserva: (isbn: string) => boolean;
   // Libros en los que la persona usuaria está esperando, con su posición.
   misEsperas: { isbn: string; posicion: number }[];
+  // ISBN de los libros que tienen al menos una persona esperando (para el mostrador).
+  conEspera: string[];
   reservar: (isbn: string) => ResultadoReserva;
   devolver: (isbn: string) => void;
   // Desencola a la persona del frente. Devuelve su nombre, o null si nadie esperaba.
@@ -180,6 +182,10 @@ export function BibliotecaProvider({ children }: Props) {
     return indice === -1 ? [] : [{ isbn, posicion: indice + 1 }];
   });
 
+  const conEspera = Object.entries(esperas)
+    .filter(([, cola]) => !cola.vacia)
+    .map(([isbn]) => isbn);
+
   return (
     <BibliotecaContext
       value={{
@@ -194,6 +200,7 @@ export function BibliotecaProvider({ children }: Props) {
         miPosicion,
         tieneReserva,
         misEsperas,
+        conEspera,
         reservar,
         devolver,
         entregarAlSiguiente,

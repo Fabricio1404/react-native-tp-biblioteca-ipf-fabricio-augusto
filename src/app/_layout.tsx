@@ -1,6 +1,4 @@
-import { Stack } from 'expo-router';
-
-import { Colores } from '@/constants/tema';
+import { NavegacionRaiz } from '@/components/NavegacionRaiz';
 import { BibliotecaProvider } from '@/context/biblioteca';
 
 // Si la app se abre con un deep link (por ejemplo a /buscar),
@@ -12,20 +10,7 @@ export const unstable_settings = {
 export default function LayoutRaiz() {
   return (
     <BibliotecaProvider>
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: Colores.primario },
-          headerTintColor: Colores.textoSobrePrimario,
-          contentStyle: { backgroundColor: Colores.fondo },
-          headerBackButtonDisplayMode: 'minimal',
-        }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="buscar" options={{ title: 'Buscar' }} />
-        <Stack.Screen
-          name="reservar/[isbn]"
-          options={{ title: 'Confirmar reserva', presentation: 'modal' }}
-        />
-      </Stack>
+      <NavegacionRaiz />
     </BibliotecaProvider>
   );
 }

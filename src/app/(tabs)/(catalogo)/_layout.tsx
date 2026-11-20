@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 
+import { EnlacePersonal } from '@/components/EnlacePersonal';
 import { Colores } from '@/constants/tema';
 
 export default function LayoutCatalogo() {
@@ -11,7 +12,10 @@ export default function LayoutCatalogo() {
         contentStyle: { backgroundColor: Colores.fondo },
         headerBackButtonDisplayMode: 'minimal',
       }}>
-      <Stack.Screen name="index" options={{ title: 'Catálogo' }} />
+      <Stack.Screen
+        name="index"
+        options={{ title: 'Catálogo', headerRight: () => <EnlacePersonal /> }}
+      />
     </Stack>
   );
 }
