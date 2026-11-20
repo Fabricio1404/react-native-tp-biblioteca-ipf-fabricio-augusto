@@ -14,6 +14,17 @@ export default function Login() {
   const [clave, setClave] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Al volver a escribir se borra el error anterior.
+  function cambiarUsuario(texto: string) {
+    setUsuario(texto);
+    setError(null);
+  }
+
+  function cambiarClave(texto: string) {
+    setClave(texto);
+    setError(null);
+  }
+
   function ingresar() {
     if (!iniciarSesion(usuario, clave)) {
       setError('Usuario o clave incorrectos. Revisalos e intentá de nuevo.');
@@ -25,7 +36,7 @@ export default function Login() {
       <Text style={styles.texto}>Ingresá con la cuenta del personal de biblioteca.</Text>
       <CampoTexto
         value={usuario}
-        onChangeText={setUsuario}
+        onChangeText={cambiarUsuario}
         placeholder="Usuario"
         accessibilityLabel="Usuario"
         autoCapitalize="none"
@@ -34,7 +45,7 @@ export default function Login() {
       />
       <CampoTexto
         value={clave}
-        onChangeText={setClave}
+        onChangeText={cambiarClave}
         placeholder="Clave"
         accessibilityLabel="Clave"
         secureTextEntry
