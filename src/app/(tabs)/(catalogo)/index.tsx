@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function Inicio() {
+import { Colores, TamanioTexto } from '@/constants/tema';
+
+export default function Catalogo() {
   return (
     <View style={styles.contenedor}>
-      <Text style={styles.titulo}>Biblioteca IPF</Text>
+      <Text style={styles.texto}>Catálogo</Text>
     </View>
   );
 }
@@ -14,8 +16,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titulo: {
-    fontSize: 24,
-    fontWeight: '700',
+  texto: {
+    fontSize: TamanioTexto.titulo,
+    color: Colores.texto,
   },
 });
