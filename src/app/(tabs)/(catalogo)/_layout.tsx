@@ -3,6 +3,12 @@ import { Stack } from 'expo-router';
 import { EnlacePersonal } from '@/components/EnlacePersonal';
 import { Colores } from '@/constants/tema';
 
+// Con un deep link a /libro/[isbn] o /escanear, el Catálogo queda debajo
+// en la pila de la pestaña y "atrás" vuelve a él en lugar de salir de la app.
+export const unstable_settings = {
+  anchor: 'index',
+};
+
 export default function LayoutCatalogo() {
   return (
     <Stack
