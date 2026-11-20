@@ -21,6 +21,7 @@ export function NavegacionRaiz() {
         name="reservar/[isbn]"
         options={{ title: 'Confirmar reserva', presentation: 'modal' }}
       />
+      <Stack.Screen name="permisos/[recurso]" options={{ title: 'Permiso', presentation: 'modal' }} />
 
       {/* Rutas protegidas: solo existen mientras el guard es true. */}
       <Stack.Protected guard={!sesionIniciada}>
