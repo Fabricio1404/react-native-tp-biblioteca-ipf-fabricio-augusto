@@ -1,7 +1,7 @@
 # Respuestas — TP 4 "Biblioteca IPF"
 
-Las respuestas citan archivos y líneas de este repositorio. Las marcadas con **⚠️ Verificar** dependen
-de lo que se observa en el teléfono y hay que confirmarlas probando la app.
+Cada respuesta indica el archivo y las líneas de este repositorio en las que se apoya. Lo marcado con
+**⚠️ Verificar** depende de cómo se comporta la app en el teléfono y hay que confirmarlo probándola.
 
 ---
 
@@ -11,99 +11,93 @@ de lo que se observa en el teléfono y hay que confirmarlas probando la app.
 
 **a) Render por render** (`src/hooks/useLibros.ts`)
 
-Caso exitoso:
+Cuando todo sale bien:
 
-| Render | `libros` | `cargando` | `error` | Qué lo provoca |
-| ------ | -------- | ---------- | ------- | -------------- |
-| 1 | `[]` | `true` | `null` | Montaje del Catálogo. Después del render corre el efecto (líneas 22-49), que llama a `obtenerLibros()`. Se ve el indicador de carga. |
-| 2 | 13 libros | `false` | `null` | A los 800 ms llega la respuesta: `setLibros(datos)` (línea 31) y `setCargando(false)` (línea 39). Las dos actualizaciones ocurren en la misma continuación del `await`, así que React las agrupa en **un solo render**. |
+| Render | `libros` | `cargando` | `error` | Causa |
+| ------ | -------- | ---------- | ------- | ----- |
+| 1 | `[]` | `true` | `null` | El Catálogo se monta con los valores iniciales (líneas 16-18) y se dibuja el indicador. Recién después React ejecuta el efecto de las líneas 22-49, que dispara `obtenerLibros()`. |
+| 2 | 15 libros | `false` | `null` | A los 800 ms la promesa se resuelve. `setLibros(datos)` (línea 31) y `setCargando(false)` (línea 39) se ejecutan seguidos, en la misma vuelta después del `await`, y React los junta en **una sola** actualización. |
 
-Total: **2 renders**.
+En total, **2 renders**.
 
-Cuando `obtenerLibros()` falla y la persona toca "Reintentar":
+Si el pedido falla y después se toca "Reintentar":
 
-| Render | `libros` | `cargando` | `error` | Qué lo provoca |
-| ------ | -------- | ---------- | ------- | -------------- |
-| 1 | `[]` | `true` | `null` | Montaje. |
-| 2 | `[]` | `false` | mensaje | La promesa se rechaza: `setError` (línea 35) y `setCargando(false)` en el `finally` (línea 39), agrupados. Se ve `MensajeError` con "Reintentar". |
-| 3 | `[]` | `true` | `null` | `reintentar()` (líneas 51-55) hace `setError(null)`, `setCargando(true)` e incrementa `intento`, agrupados por ser un evento. Como `intento` cambió, React ejecuta la limpieza del efecto anterior y lo vuelve a correr. |
-| 4 | 13 libros | `false` | `null` | Llega la respuesta del nuevo pedido. |
+| Render | `libros` | `cargando` | `error` | Causa |
+| ------ | -------- | ---------- | ------- | ----- |
+| 1 | `[]` | `true` | `null` | Montaje, igual que antes. |
+| 2 | `[]` | `false` | mensaje | La promesa se rechaza: el `catch` guarda el mensaje (línea 35) y el `finally` apaga la carga (línea 39). Se dibuja `MensajeError` con el botón. |
+| 3 | `[]` | `true` | `null` | El botón llama a `reintentar()` (líneas 51-55): limpia el error, prende la carga y suma 1 a `intento`. Al ser un evento, React agrupa los tres cambios. Como `intento` está en las dependencias, primero corre la limpieza del efecto viejo y después el efecto nuevo. |
+| 4 | 15 libros | `false` | `null` | Llega la respuesta del segundo pedido. |
 
-**b) ¿Se desmonta el Catálogo?** ⚠️ Verificar con un `console.log` temporal en la limpieza (líneas 46-48) y después borrarlo.
+**b) ¿Se desmonta el Catálogo?** ⚠️ Verificar agregando un `console.log` provisorio dentro de la limpieza (líneas 46-48) y sacándolo después.
 
-- **Al cambiar a "Mis reservas":** no se desmonta. Las tabs no apilan pantallas: mantienen montadas las que ya se visitaron y solo cambian cuál se ve, así que la limpieza no corre.
-- **Al abrir un detalle:** tampoco. El detalle se apila encima en el Stack de la pestaña y el Catálogo queda montado debajo.
-- **Cuándo corre la limpieza en la práctica:** cuando se toca "Reintentar", porque cambia `intento` y se descarta el pedido anterior. También cuando el Catálogo realmente se desmonta: al cerrar la app, al recargarla en desarrollo o si el navegador lo saca de la pila.
+- **Cambiar a "Mis reservas":** no lo desmonta. El navegador de pestañas deja vivas las pantallas ya visitadas y solo alterna cuál se muestra.
+- **Abrir un detalle:** tampoco. El detalle entra arriba de la pila de la pestaña y el Catálogo sigue montado abajo, esperando.
+- **Cuándo corre mi limpieza:** al tocar "Reintentar" (cambia `intento` y el pedido anterior queda descartado), y cuando el Catálogo deja de existir de verdad: se cierra la app o se recarga en desarrollo.
 
-**c) ¿Por qué no se puede pasar una función `async` a `useEffect`?**
-Una función `async` siempre devuelve una promesa, y `useEffect` espera que el callback devuelva `undefined` o una función de limpieza. Si devolviera una promesa, React no tendría una limpieza para ejecutar. Lo resolví declarando una función `async` **dentro** del efecto (`cargar`, líneas 27-42), llamándola (línea 44) y devolviendo la limpieza de forma sincrónica (líneas 46-48).
+**c) `async` directo en `useEffect`.**
+React usa lo que devuelve el callback del efecto como función de limpieza. Una función marcada `async` devuelve siempre una promesa, nunca una función, así que React no tendría qué ejecutar al limpiar, y además no podría devolver la limpieza a tiempo. Mi solución: el callback del efecto es común y adentro defino `cargar` como `async` (líneas 27-42). La llamo en la línea 44 y devuelvo la limpieza enseguida (líneas 46-48).
 
-**d) ¿Cómo implementé `reintentar`?**
-Con un contador `intento` en el estado (línea 20) que está en el array de dependencias del efecto (línea 49). `reintentar()` lo incrementa (línea 54), React ve que la dependencia cambió, ejecuta la limpieza del efecto anterior y vuelve a correrlo, lo que hace un pedido nuevo.
+**d) Cómo funciona `reintentar`.**
+Tengo un número `intento` en el estado (línea 20) que figura en las dependencias del efecto (línea 49). `reintentar` lo incrementa (línea 54). Para React, una dependencia distinta significa "este efecto quedó viejo": limpia el anterior y vuelve a correrlo, y eso hace un pedido nuevo.
 
-Usé un contador y no `error` o `cargando`, porque esos valores también los cambia el propio efecto. Con `error` en las dependencias, cada falla dispararía otro pedido automático, en un bucle sin que la persona haga nada. El contador solo cambia cuando la persona toca el botón: expresa exactamente la intención de "volver a pedir".
+Elegí un contador porque es lo único que cambia **solamente** cuando la persona lo pide. Si hubiera puesto `error` como dependencia, el propio efecto lo modifica al fallar, y cada falla lanzaría otro pedido sola, sin que nadie toque nada.
 
 ### B2. La condición de carrera del buscador
 
-En mi buscador (`src/app/buscar.tsx`) además hay *debounce*: se espera 300 ms sin escribir antes de pedir (líneas 43-54). La tabla supone que los dos pedidos llegaron a salir.
+La lógica del buscador está en el hook `src/hooks/useBusquedaLibros.ts`. Además espera 300 ms sin cambios antes de pedir (líneas 33-44). En la tabla supongo que los dos pedidos alcanzaron a salir.
 
 | Momento | Qué pasa | Sin limpieza: qué se ve | Con mi código: qué se ve |
 | ------- | -------- | ----------------------- | ------------------------ |
 | t = 0 ms | Escribe "bor" → `buscarLibros("bor")` (1.400 ms) | "Buscando…" | "Buscando…" |
-| t = 200 ms | Escribe "borges" → `buscarLibros("borges")` (300 ms) | "Buscando…" | "Buscando…". La limpieza del efecto de "bor" ya corrió y marcó `cancelado = true`. |
-| t = 500 ms | Llega "borges" | Resultados de "borges" | Resultados de "borges" |
-| t = 1.400 ms | Llega "bor" | **Resultados de "bor"**, aunque el campo dice "borges". La respuesta vieja pisa a la nueva. | Siguen los de "borges": la respuesta de "bor" se ignora. |
+| t = 200 ms | Escribe "borges" → `buscarLibros("borges")` (300 ms) | "Buscando…" | "Buscando…". El efecto de "bor" ya se limpió: su `cancelado` quedó en `true`. |
+| t = 500 ms | Llega "borges" | La lista de "borges" | La lista de "borges" |
+| t = 1.400 ms | Llega "bor" | **La lista de "bor" reemplaza a la de "borges"**, con el campo diciendo "borges" | No cambia nada: esa respuesta se tira |
 
-En mi catálogo "bor" y "borges" coinciden con los mismos dos libros, así que la diferencia no se nota a simple vista. Con un catálogo más grande, "bor" podría traer libros que no corresponden a la búsqueda actual.
+Con mis datos, "bor" y "borges" devuelven los mismos dos libros de Borges, así que a simple vista no se notaría. Pero si "bor" trajera otros títulos, aparecerían resultados que no tienen nada que ver con lo que está escrito.
 
-**a) Qué hace la limpieza** (líneas 56-59): pone `cancelado = true` y cancela el temporizador con `clearTimeout`. La respuesta que llega después pasa por `if (!cancelado)` (líneas 46 y 50) y no actualiza el estado. Además, el resultado guarda para qué consulta era (línea 47), y la pantalla solo lo muestra si coincide con la consulta actual (línea 74).
+**a) La limpieza** (líneas 46-49 del hook) hace dos cosas: marca `cancelado = true` y cancela el temporizador pendiente con `clearTimeout`. Cuando la respuesta vieja llega, los `if (!cancelado)` de las líneas 36 y 40 impiden que toque el estado. Como segunda protección, cada resultado guarda la consulta que lo pidió (línea 37), y el hook solo lo entrega si coincide con la consulta actual (línea 58).
 
-La limpieza se ejecuta **antes de volver a correr el efecto**, cuando cambia `consulta` (cada letra, porque cambia `q` en la URL), y cuando la pantalla se desmonta.
+React ejecuta esa limpieza **antes de correr el efecto otra vez**, o sea cada vez que cambia la consulta (cada tecla cambia `q` en la URL), y también cuando la pantalla se desmonta.
 
-**b) La propuesta `if (texto === q)` dentro del `.then()`** no funciona. Esa función se creó en el render en el que se hizo la búsqueda, y por clausura "ve" el `q` de **ese** render, que es el mismo valor que se buscó. La comparación siempre da `true`, aunque la persona ya haya escrito otra cosa: la clausura guarda el valor viejo, no el actual.
+**b) La idea del compañero** (`if (texto === q)` adentro del `.then()`) no sirve. La función del `.then()` nació en un render puntual y captura por clausura el `q` de ese momento, que es justamente el texto que se buscó. Comparar el texto buscado con el `q` capturado da siempre verdadero, aunque la persona ya haya escrito otra cosa. Para que funcione hay que comparar con algo que se lea "en vivo", como un `useRef` donde se vaya guardando la consulta más reciente. Mi comparación de la línea 58 no tiene ese problema porque se hace en el render, con los valores de ese render.
 
-Para que sirviera habría que comparar con un valor que se lea en el momento, por ejemplo un `useRef` actualizado con la consulta actual. En mi código la comparación de la línea 74 sí funciona, porque se hace **durante el render**, con la consulta actual contra la consulta guardada en el resultado.
-
-**c) URL y botón atrás.** Mientras se escribe, la URL cambia en cada letra (`/buscar?q=b`, `?q=bo`…) por `router.setParams` (línea 65). `setParams` actualiza los parámetros de la pantalla actual **sin apilar** pantallas nuevas, así que "atrás" sale del buscador de una vez.
-
-Con `router.push` cada letra apilaría una pantalla `/buscar` nueva: habría que tocar "atrás" una vez por letra, y cada pantalla haría su propia búsqueda.
+**c) URL y botón atrás.** Cada letra modifica el `?q=` de la URL mediante `router.setParams` (`src/app/buscar.tsx`, línea 27). `setParams` reescribe los parámetros de la pantalla en la que ya estoy, sin crear una entrada nueva en el historial, así que un solo "atrás" saca del buscador. Con `router.push` cada tecla agregaría una pantalla `/buscar` más a la pila: habría que retroceder letra por letra, y cada una de esas pantallas haría su propia búsqueda.
 
 ### B3. Mutar o reemplazar
 
-**a)** Muestra **0**. `encolar` modifica el objeto que ya está en el estado (mutación), pero no se llama a ningún `setState`. React no se entera del cambio y no vuelve a renderizar. Los datos internos tienen 3 personas, pero la pantalla sigue mostrando el valor del último render.
+**a)** Se sigue viendo **0**. `encolar` cambia por dentro el mismo objeto que React tiene guardado, y nadie llama a una función `set…`. Para React no pasó nada, así que no vuelve a dibujar: la cola tiene 3 personas, pero en pantalla queda el número del último render.
 
-**b)** El `TextInput` controlado llama a su `setState` en cada letra. Eso provoca un render, y en ese render se lee `espera.tamanio`, que ya vale 3: el número "salta". Un error que aparece "a veces" es peor que uno que aparece siempre, porque depende de algo ajeno (que otro estado provoque un render). Es difícil de reproducir, puede pasar las pruebas y aparecer frente a la persona usuaria, y hace pensar que el problema está en otra parte.
+**b)** Al escribir en el `TextInput` controlado se llama a su `set…` en cada letra, React vuelve a dibujar el componente completo y en ese dibujo lee `espera.tamanio`, que ya vale 3. Por eso el número "salta" de golpe. Un error así es más peligroso que uno constante, porque aparece o no según lo que haga otra parte de la pantalla: cuesta reproducirlo, puede pasar las pruebas sin que nadie lo vea y despista sobre dónde está la causa.
 
-**c) Cómo lo resolví.** En el Context nunca modifico la estructura guardada en el estado: creo una nueva a partir de la anterior.
+**c)** En mi Context nunca toco la estructura que está en el estado. Armo una copia, le aplico el cambio y la guardo como estado nuevo.
 
-- Pila de recientes: `new Pila(anterior.aArray())` y después `apilar` (`src/context/biblioteca.tsx`, líneas 88-96).
-- Cola de espera al reservar: `new Cola(enEspera(isbn))`, después `encolar` y `setEsperas` (líneas 157-159).
-- Al entregar al siguiente: líneas 214-219.
+- Recientes: `new Pila(anterior.aArray())` y después `apilar` (`src/context/biblioteca.tsx`, líneas 156-164).
+- Reservar sin ejemplares: `new Cola(enEspera(isbn))`, `encolar(YO)` y `setEsperas` (líneas 225-227).
+- Entregar al siguiente: líneas 282-287.
 
-| Alternativa | Ventaja | Costo |
-| ----------- | ------- | ----- |
-| Estructura nueva a partir de la anterior (mi solución) | React detecta el cambio por referencia; el estado viejo no se toca, así que no hay sorpresas | Copia los elementos en cada cambio (O(n)); con listas de espera chicas no importa |
-| Contador de versión (`setVersion(v => v + 1)` después de mutar) | No copia nada | La mutación queda escondida; si en algún lugar se olvida incrementar, vuelve el error de B3; y los `useMemo` o efectos que dependen de la estructura no ven el cambio, porque la referencia es la misma |
-| `useReducer` que devuelve estructuras nuevas | Toda la lógica de cambios queda en un solo lugar y es fácil de testear | Más código (acciones, tipos, reducer) para una app de este tamaño |
+| Opción | A favor | En contra |
+| ------ | ------- | --------- |
+| Copia nueva en cada cambio (la mía) | La referencia cambia y React lo detecta siempre; el valor anterior queda intacto | Copia todos los elementos cada vez (O(n)); con listas de espera de pocas personas es despreciable |
+| Mutar y sumar un "contador de versión" | No copia | El cambio real sigue escondido; alcanza con olvidar el contador en un lugar para volver al error; los efectos o `useMemo` que dependen de la cola no se enteran porque la referencia es la misma |
+| `useReducer` con estados nuevos | Toda la lógica de cambios en una sola función pura, fácil de probar | Más código (tipos de acción, reducer, `dispatch`) del que esta app necesita |
 
 ### B4. ¿Dónde vive cada dato?
 
-| Dato | Dónde vive en mi app | Por qué ahí |
-| ---- | -------------------- | ----------- |
-| Texto del buscador | **URL** (`q`), con una copia en estado local (`texto`) solo para el campo (`buscar.tsx`, líneas 28-30) | En la URL se puede compartir y abrir con un deep link (`bibliotecaipf://buscar?q=borges`). La copia local evita que el cursor salte mientras se escribe. |
-| Préstamos y reservas | **Context** (`prestamos`, línea 73) | Los escriben el modal de reserva y el mostrador, y los leen el detalle, el Catálogo y "Mis reservas": varias pantallas en navegadores distintos. |
-| Listas de espera | **Context** (`esperas`: `Record<isbn, Cola>`, línea 74) | Las comparten "Mis reservas", el detalle y el mostrador. |
-| Vistos recientemente | **Context** (`vistos`, una `Pila`, línea 71) | Se escriben en el detalle y se leen en el Catálogo. |
-| Sesión del personal | **Context** (`sesionIniciada`, línea 72) | La lee `NavegacionRaiz` para los `Stack.Protected`, y también el link "Personal". |
-| Ejemplares disponibles | **Se calcula** (`disponibles()`, líneas 112-121) | Se deriva del estante inicial y los préstamos activos. Guardarlo aparte duplicaría el dato (ver E4d). |
-| Estado del permiso de cámara | **Sistema operativo**. La app tiene una copia en el estado de `useCameraPermissions` y la vuelve a consultar al enfocar y al volver a la app (`usePermiso.ts`, líneas 20-21) | La persona puede cambiarlo desde Ajustes en cualquier momento: la fuente de verdad es el sistema. |
-| Identificador de la notificación programada | **Context**, dentro de cada `Prestamo` (`idNotificacion`). La notificación en sí la guarda el sistema operativo | Va junto al préstamo porque se usa al desactivar "Recordarme" y al devolver (líneas 163-170 y 196-202). |
+| Dato | Dónde vive | Por qué ahí |
+| ---- | ---------- | ----------- |
+| Texto del buscador | **URL** (`q`) más una copia local para el campo (`buscar.tsx`, líneas 18-20) | En la URL se puede compartir y abrir con `bibliotecaipf://buscar?q=borges`; la copia local evita que el cursor salte mientras se escribe. |
+| Préstamos y reservas | **Context** (`prestamos`, línea 93), guardado además con AsyncStorage | Lo modifican el modal de reserva y el mostrador y lo leen el detalle, el Catálogo y "Mis reservas", que están en navegadores distintos. Se guarda para no perderlo al cerrar la app. |
+| Listas de espera | **Context** (`esperas`, una `Cola` por ISBN, línea 94), también guardadas | Las usan el detalle, "Mis reservas" y el mostrador. |
+| Vistos recientemente | **Context** (`vistos`, una `Pila`, línea 91), también guardados | Se cargan desde el detalle y se muestran en el Catálogo. |
+| Sesión del personal | **Context** (`sesionIniciada`, línea 92), sin guardar | `NavegacionRaiz` la necesita para los `Stack.Protected`. No la guardo a propósito: al reabrir la app hay que volver a ingresar. |
+| Ejemplares disponibles | **No se guarda: se calcula** (`disponibles()`, líneas 180-189) | Sale del estante inicial y de los préstamos activos. Un contador aparte podría contradecir a la lista de préstamos (ver E4d). |
+| Estado del permiso de cámara | Lo decide **el sistema operativo**. La app tiene una copia en `useCameraPermissions` que se actualiza al enfocar la pantalla y al volver a la app (`usePermiso.ts`, líneas 20-21) | La persona lo puede cambiar desde Ajustes sin pasar por la app. |
+| Id de la notificación programada | **Context**, dentro de cada préstamo (`idNotificacion`), y guardado con el resto. La notificación en sí la tiene el sistema | Se necesita para cancelarla al apagar "Recordarme" o al devolver (líneas 231-238 y 264-270). |
 
-**¿Qué componentes se vuelven a renderizar?** Cuando cambia el `value` del Context se vuelven a renderizar **todos los componentes que lo consumen** con `useBiblioteca()`, aunque solo usen una parte. El `value` es un objeto nuevo en cada render del provider (líneas 253-283).
+**Re-renders del Context.** Cada vez que el provider se vuelve a dibujar arma un objeto `value` nuevo (líneas 322-347), y React vuelve a dibujar **todos** los componentes que llaman a `useBiblioteca()`, sin importar qué parte usan. El Catálogo tiene `VistosRecientemente` y una `FilaLibro` por libro leyendo el Context, y sigue montado aunque esté en otra pestaña. Por eso, al activar un recordatorio en "Mis reservas" cambia `prestamos` y esos componentes también se vuelven a dibujar.
 
-El Catálogo usa `VistosRecientemente` y `FilaLibro`, que leen el Context. Al activar un recordatorio en "Mis reservas" cambia `prestamos`, así que esos componentes se vuelven a renderizar aunque la pestaña no se vea, porque sigue montada.
-
-Para evitarlo se podría dividir el Context en varios (sesión, recientes, préstamos), memorizar el `value` o usar selectores. En una app de este tamaño no vale la pena: son pocas filas y el render es barato. Además el React Compiler (`reactCompiler: true` en `app.json`) evita trabajo de más dentro de cada componente. Lo haría solo si el Profiler mostrara un problema real.
+Se podría evitar partiendo el Context en varios más chicos (sesión, recientes, préstamos) o con selectores. Para quince libros y un par de pantallas el costo es mínimo y no justifica la complejidad extra, más con el React Compiler activo (`app.json`). Lo cambiaría solo si el Profiler mostrara una demora que se note.
 
 ---
 
@@ -115,66 +109,69 @@ Para evitarlo se podría dividir el Context en varios (sesión, recientes, prés
 
 | # | Acción | Pilas resultantes |
 | - | ------ | ----------------- |
-| 1 | Abre la app | Stack raíz: `[(tabs)]` · Tabs: Catálogo activa · Stack Catálogo: `[index]` |
-| 2 | Toca un libro | Stack raíz: `[(tabs)]` · Stack Catálogo: `[index, libro/X]` |
-| 3 | Toca "Reservar" | Stack raíz: `[(tabs), reservar/X (modal)]` · Stack Catálogo: `[index, libro/X]` |
-| 4 | Toca "Confirmar" | Stack raíz: `[(tabs)]` · Tabs: Mis reservas activa · Stack Catálogo sigue `[index, libro/X]` |
-| 5 | Atrás (Android) | Las tabs vuelven a la primera pestaña: Catálogo activa, mostrando `libro/X` |
-| 6 | Toca la tab "Catálogo" | Tocar la pestaña que ya está activa vuelve al inicio de su pila: Stack Catálogo `[index]` |
+| 1 | Abre la app | Raíz: `[(tabs)]` · pestaña activa: Catálogo · pila del Catálogo: `[index]` |
+| 2 | Toca un libro | Raíz: `[(tabs)]` · pila del Catálogo: `[index, libro/X]` |
+| 3 | Toca "Reservar" | Raíz: `[(tabs), reservar/X (modal)]` · pila del Catálogo sin cambios |
+| 4 | Toca "Confirmar" | Raíz: `[(tabs)]` · pestaña activa: Mis reservas · pila del Catálogo: `[index, libro/X]` |
+| 5 | Atrás (Android) | Las pestañas vuelven a la primera: Catálogo, mostrando `libro/X` |
+| 6 | Toca la pestaña "Catálogo" | Al tocar la pestaña que ya está activa, su pila vuelve al principio: `[index]` |
 
-**a)** En el paso 4 uso `router.dismiss()` y después `router.navigate('/reservas')` (`src/lib/navegacion.ts`, líneas 5-8).
+**a)** En el paso 4 llamo a `router.dismiss()` y luego a `router.navigate('/reservas')` (`src/lib/navegacion.ts`, líneas 5-8).
 
-- **`dismiss()`** saca el modal de la pila raíz, así que "atrás" no puede volver a la confirmación.
-- **`navigate('/reservas')`** cambia a la pestaña "Mis reservas" sin crear otra.
-- **Con `push('/reservas')`**, el modal quedaría debajo y "atrás" volvería a la confirmación (el error que pide evitar la consigna). Además se apilaría otra instancia de las tabs.
-- **Con `replace`**, el modal se reemplazaría por las tabs dentro de la pila raíz, que ya las tiene debajo: se duplicaría el navegador de pestañas.
-- **`dismissTo('/reservas')`** desapila hasta encontrar esa ruta. Como `/reservas` está **dentro** de `(tabs)`, el comportamiento depende de cómo resuelva la ruta anidada.
+- **`dismiss`** quita el modal de la pila raíz, así que ya no hay confirmación a la cual volver.
+- **`navigate`** activa la pestaña "Mis reservas" que ya existe.
 
-Elegí `dismiss` + `navigate` porque cada paso hace una sola cosa y es explícito.
+Las otras opciones:
 
-**b)** En el paso 5 la persona ve el **detalle**: cada pestaña conserva su propia pila, y la del Catálogo seguía con `[index, libro/X]`. En el paso 6, tocar la pestaña activa la lleva al inicio de su pila y se ve el **Catálogo**.
+- **`push('/reservas')`** dejaría el modal abajo: "atrás" volvería a la confirmación, que es justo lo que la consigna pide evitar. Además pondría una segunda copia de las pestañas encima.
+- **`replace`** cambiaría el modal por otra entrada `(tabs)` en la pila raíz, que ya tiene una debajo: quedarían dos navegadores de pestañas.
+- **`dismissTo('/reservas')`** busca hacia abajo esa ruta para volver a ella. Como `/reservas` vive **adentro** de `(tabs)`, el resultado depende de cómo resuelva una ruta anidada.
 
-Me parece correcto: volver a "Catálogo" desde otra pestaña muestra lo que la persona estaba mirando, y tocar la pestaña otra vez es la forma conocida de "volver al principio".
+Me quedé con dos pasos simples y explícitos.
+
+**b)** En el paso 5 se ve el **detalle**: cada pestaña recuerda su propia pila y la del Catálogo seguía en `[index, libro/X]`. En el paso 6, tocar otra vez la pestaña activa la lleva a su inicio y se ve el **Catálogo**. Me parece lo correcto: volver a una pestaña muestra donde se había quedado la persona, y tocarla de nuevo es el gesto habitual para "ir al principio".
 
 ### C2. El escáner que dispara de más
 
-**a)** `onBarcodeScanned` se llama muchas veces por segundo mientras el código está frente a la cámara. Sin protección, cada llamada haría un `router.push`. Cada acción se **encola** en la cola de navegación de Expo Router (`routingQueue`, FIFO, como vimos en el TP 2), y después se ejecutan todas en orden: se apilarían varias pantallas de detalle iguales, y habría que tocar "atrás" muchas veces.
+La lógica de lectura está en el hook `src/hooks/useEscaner.ts`.
 
-**b)** Usé **`useRef`** (`escanear.tsx`, líneas 25-27 y 40). Un `useState` puesto en `true` en el primer escaneo no alcanza: el nuevo valor recién está disponible en el **próximo render**. Las llamadas a `onBarcodeScanned` que llegan antes de ese render usan la función creada en el render anterior, que por clausura ve todavía `false`, y vuelven a navegar. En cambio `ref.current = true` cambia el valor en el momento, y la siguiente llamada ya lo ve (línea 46).
+**a)** Mientras el código esté frente a la cámara, `onBarcodeScanned` puede llamarse varias veces por segundo. Si cada llamada hiciera `router.push`, todas esas acciones irían a parar a la cola de navegación de Expo Router (`routingQueue`, que atiende en orden de llegada, como vimos en el TP 2) y se ejecutarían una tras otra. El resultado serían varios detalles iguales apilados, y la persona tendría que tocar "atrás" muchas veces para salir.
 
-**c)** Con `router.replace` (línea 42) la pantalla del escáner se **reemplaza** por el detalle dentro del Stack del Catálogo: al tocar "atrás" se vuelve al Catálogo. Con `push`, "atrás" volvería al escáner con la cámara encendida, que podría volver a leer el mismo código y abrir el detalle de nuevo.
+**b)** Uso **`useRef`** (líneas 16-19 del hook): `navegando` se pone en `true` antes de navegar (línea 22) y cada lectura lo revisa primero (línea 28). Con `useState` no alcanza, porque el valor nuevo recién existe en el **render siguiente**. Hasta que ese render ocurre, las lecturas que siguen llegando ejecutan la función armada en el render anterior, que por clausura todavía tiene `false`, y navegan otra vez. Un ref, en cambio, se modifica al instante y la próxima lectura ya ve `true`.
 
-**d)** Si el ISBN no está en el catálogo, la app muestra un aviso dentro de la pantalla ("El código … no está en el catálogo…") y la cámara sigue activa (líneas 53-58). Para que el aviso no aparezca diez veces, guardo el último código desconocido en un `useRef` (`ultimoDesconocido`, línea 28): si llega el mismo código, se ignora (líneas 54-56). Si se escanea otro, se actualiza el aviso.
+**c)** Con `router.replace` (línea 24) el escáner **se reemplaza** por el detalle dentro de la pila del Catálogo: "atrás" lleva al Catálogo. Con `push`, "atrás" volvería al escáner con la cámara prendida, y si el libro sigue cerca puede leerlo de nuevo y volver a abrir el detalle.
+
+**d)** Si el ISBN leído no existe en el catálogo, se muestra un aviso en la misma pantalla y la cámara sigue leyendo (líneas 35-40). Para no repetir el aviso, el último código desconocido queda en otro ref (`ultimoDesconocido`, línea 19): si vuelve a llegar el mismo, se ignora (líneas 36-38). Si llega un código distinto, el aviso se actualiza.
 
 ### C3. Deep links y rutas protegidas
 
-⚠️ Verificar cada fila en Expo Go con `exp://<IP>:8081/--/<ruta>`.
+⚠️ Verificar cada fila en Expo Go usando `exp://<IP>:8081/--/<ruta>`.
 
-| Link | Qué ve la persona | Qué queda debajo en la pila | Qué parte del código lo decide |
-| ---- | ----------------- | --------------------------- | ------------------------------ |
-| `bibliotecaipf://libro/9789870001010` | Detalle de *Ficciones* | El Catálogo (`index`) en el Stack de la pestaña | `anchor: 'index'` en `src/app/(tabs)/(catalogo)/_layout.tsx` y `anchor: '(tabs)'` en `src/app/_layout.tsx` (líneas 9-11) |
-| `bibliotecaipf://libro/123` | "123 no es un ISBN válido" con "Ir al Catálogo" | El Catálogo | `libro/[isbn].tsx`, líneas 18 y 27-36 (`esIsbnValido`) |
-| `bibliotecaipf://buscar?q=borges` | Buscador con "borges" y sus resultados | Las pestañas | `anchor: '(tabs)'` (`_layout.tsx`, líneas 9-11) y `useLocalSearchParams` (`buscar.tsx`, línea 28) |
-| `bibliotecaipf://mostrador` (sin sesión) | No se abre el mostrador: la ruta no existe sin sesión. ⚠️ Anotar qué pantalla muestra Expo Router | Las pestañas | `Stack.Protected guard={sesionIniciada}` (`NavegacionRaiz.tsx`, líneas 33-35) |
-| `bibliotecaipf://reserva` | "Mis reservas" | Las pestañas; `/reserva` no queda en el historial | `<Redirect href="/reservas" />` (`reserva.tsx`) |
-| `bibliotecaipf://escanear` (cámara bloqueada) | Escáner con el mensaje de bloqueo, "Abrir Ajustes" y el campo para el ISBN a mano | El Catálogo | `escanear.tsx`, líneas 92-102 y 115; `permisos.ts`, línea 20 |
+| Link | Qué ve la persona | Qué queda debajo | Qué parte del código lo decide |
+| ---- | ----------------- | ---------------- | ------------------------------ |
+| `bibliotecaipf://libro/9789870001010` | El detalle de *Ficciones* | El Catálogo, en la pila de la pestaña | `anchor: 'index'` en `src/app/(tabs)/(catalogo)/_layout.tsx` (líneas 8-10) y `anchor: '(tabs)'` en `src/app/_layout.tsx` (líneas 14-16) |
+| `bibliotecaipf://libro/123` | Aviso de que "123" no es un ISBN válido, con botón al Catálogo | El Catálogo | `libro/[isbn].tsx`, líneas 18 y 27-36 |
+| `bibliotecaipf://buscar?q=borges` | El buscador ya completado con "borges" | Las pestañas | El `anchor` del layout raíz y `useLocalSearchParams` (`buscar.tsx`, línea 18) |
+| `bibliotecaipf://mostrador` (sin sesión) | El mostrador no se abre porque sin sesión esa ruta no existe. ⚠️ Anotar qué pantalla muestra | Las pestañas | `Stack.Protected guard={sesionIniciada}` (`src/components/NavegacionRaiz.tsx`, líneas 46-48) |
+| `bibliotecaipf://reserva` | La pestaña "Mis reservas" | Las pestañas; `/reserva` no queda guardada | `<Redirect href="/reservas" />` en `src/app/reserva.tsx` |
+| `bibliotecaipf://escanear` (cámara bloqueada) | El escáner con el mensaje de cámara desactivada, "Abrir Ajustes" y el campo para el ISBN | El Catálogo | `escanear.tsx`, líneas 55-65 y 78; `src/lib/permisos.ts`, línea 20 |
 
-**¿Por qué `/libro/123` llega al detalle?** Porque `[isbn]` es un segmento dinámico: la ruta acepta **cualquier** texto en esa posición. Expo Router solo mira la forma de la URL, no si el dato existe. La responsabilidad de responder bien es de **la pantalla**: validar que sean 13 dígitos y que el libro exista, y mostrar un mensaje claro con una salida (`libro/[isbn].tsx`, líneas 17-45).
+**¿Por qué `/libro/123` llega a la pantalla de detalle?** El archivo se llama `[isbn].tsx`: los corchetes indican un segmento variable que acepta **cualquier** texto. Expo Router solo compara la forma de la URL y no sabe qué libros existen. Por eso es la **pantalla** la que tiene que revisar el dato: que sean 13 dígitos y que el libro esté en el catálogo, y si no, explicar qué pasó y ofrecer una salida (`libro/[isbn].tsx`, líneas 17-45).
 
 ### C4. Foco, montaje y primer plano
 
 **a)**
-- **`useEffect` con `[]`** detecta el **montaje** del componente. Corre una vez y la limpieza corre al desmontarse.
-- **`useFocusEffect`** detecta cuándo la pantalla **gana el foco dentro de la navegación**: al llegar a ella, al cambiar de pestaña y volver, o al cerrarse un modal que estaba encima.
-- **`AppState`** detecta cuándo **la app entera** pasa a segundo plano y vuelve al frente.
+- **`useEffect(…, [])`** se ejecuta cuando el componente **aparece por primera vez**, y su limpieza cuando desaparece.
+- **`useFocusEffect`** se ejecuta cada vez que la pantalla **pasa a ser la que se ve dentro de la app**: al llegar a ella, al volver desde otra pestaña o cuando se cierra un modal que la tapaba.
+- **`AppState`** avisa cuando **toda la app** se va a segundo plano o vuelve a primer plano.
 
 **b)**
-- **Si la persona va a Ajustes y vuelve,** se entera **`AppState`**. La pantalla no se desmontó ni perdió el foco dentro de la app, así que `useEffect` y `useFocusEffect` no se disparan.
-- **Si va al Catálogo y vuelve a "Mis reservas",** se entera **`useFocusEffect`**. `AppState` no cambia, porque la app nunca salió del frente, y `useEffect` con `[]` tampoco, porque la pestaña sigue montada.
+- **Ida y vuelta a Ajustes:** solo lo detecta **`AppState`**. Desde el punto de vista de la navegación, la pantalla nunca dejó de estar enfocada ni se desmontó.
+- **Cambio de pestaña y regreso:** el único que reacciona es **`useFocusEffect`**, porque la pantalla recupera el foco. La app nunca salió del frente, y la pestaña sigue montada, así que el efecto con `[]` no vuelve a correr.
 
-**c)** Usé **las dos**, en `usePermiso` (`src/hooks/usePermiso.ts`, líneas 20-21): `useFocusEffect(revisar)` y `useRevisarAlVolver(revisar)`, que usa `AppState` (`useRevisarAlVolver.ts`, líneas 10-16). "Mis reservas" lo usa en `reservas.tsx` (línea 18), y el escáner también.
+**c)** Combiné las dos en `usePermiso` (`src/hooks/usePermiso.ts`, líneas 20-21): `useFocusEffect(revisar)` y `useRevisarAlVolver(revisar)`, que por dentro usa `AppState` (`useRevisarAlVolver.ts`, líneas 10-16). "Mis reservas" lo usa en `reservas.tsx` (línea 18), y también el escáner.
 
-Si hubiera usado solo `useFocusEffect`, al volver de Ajustes con las notificaciones activadas la pestaña seguiría diciendo "desactivadas" hasta cambiar de pestaña y volver. Si hubiera usado solo `AppState`, después de aceptar el permiso en `/permisos/notificaciones` (un modal dentro de la app) el estado quedaría viejo hasta salir de la app.
+Con una sola me quedaría un caso desactualizado. Solo con `useFocusEffect`, al volver de Ajustes la pestaña seguiría diciendo "desactivadas" hasta cambiar de pestaña. Solo con `AppState`, después de aceptar el permiso en `/permisos/notificaciones`, que es un modal de la propia app, el estado no se actualizaría.
 
 ---
 
@@ -186,40 +183,43 @@ Si hubiera usado solo `useFocusEffect`, al volver de Ajustes con las notificacio
 
 | # | Acción | Qué muestra mi app | `status` | `canAskAgain` |
 | - | ------ | ------------------ | -------- | ------------- |
-| 1 | Toca "Escanear" por primera vez | "Revisando el permiso…" y enseguida la pantalla previa `/permisos/camara` con el beneficio y "Continuar" (`escanear.tsx`, líneas 32-37) | `undetermined` | `true` |
-| 2 | "Continuar" → "No permitir" | Vuelve al escáner con el texto del beneficio, "Usar la cámara" y el campo del ISBN a mano | `denied` | `true` |
-| 3 | Toca "Escanear" otra vez | Pantalla previa con "Continuar" | `denied` | `true` |
-| 4 | "Continuar" → "No permitir" | Escáner en estado bloqueado: "La cámara está desactivada…", "Abrir Ajustes" e ISBN a mano | `denied` | `false` |
-| 5 | Toca "Escanear" otra vez | Directamente el estado bloqueado, con "Abrir Ajustes" e ISBN a mano | `denied` | `false` |
-| 6 | "Abrir Ajustes" → habilita → vuelve | La cámara funcionando | `granted` | `true` |
+| 1 | Toca "Escanear" por primera vez | Un instante "Revisando el permiso…" y enseguida la pantalla previa `/permisos/camara`, con el beneficio y "Continuar" (`escanear.tsx`, líneas 27-32) | `undetermined` | `true` |
+| 2 | "Continuar" → "No permitir" | De vuelta en el escáner: el texto del beneficio, el botón "Usar la cámara" y el campo para el ISBN | `denied` | `true` |
+| 3 | Toca "Escanear" otra vez | La pantalla previa con "Continuar" | `denied` | `true` |
+| 4 | "Continuar" → "No permitir" | El escáner en modo bloqueado: aviso de cámara desactivada, "Abrir Ajustes" y el campo del ISBN | `denied` | `false` |
+| 5 | Toca "Escanear" otra vez | Directamente el modo bloqueado | `denied` | `false` |
+| 6 | "Abrir Ajustes" → habilita → vuelve | La cámara leyendo códigos | `granted` | `true` |
 
-**a) En iOS** el sistema muestra el diálogo **una sola vez**. Después del primer "No permitir" (paso 2), `canAskAgain` ya es `false`: mi app pasa directamente al estado bloqueado, con "Abrir Ajustes" e ISBN a mano. En el paso 3 no aparece la pantalla con "Continuar", y el paso 4 no existe.
+**a) En iOS** no hay segunda oportunidad: el sistema pregunta una vez y, si la respuesta es "No permitir" (paso 2), `canAskAgain` ya es `false` y mi app pasa directamente al modo bloqueado, con "Abrir Ajustes" y el campo para escribir el ISBN. Ya en el paso 3 no se ve "Continuar", y el paso 4 no existe.
 
-**b) La línea que decide** está en `src/lib/permisos.ts:20`:
+**b) La línea que decide** es `src/lib/permisos.ts:20`:
 
 ```ts
 return respuesta.canAskAgain ? 'preguntable' : 'bloqueado';
 ```
 
-`ExplicacionPermiso.tsx` (línea 31) y `escanear.tsx` (líneas 85-102) muestran "Continuar" o "Abrir Ajustes" según ese estado. Uso `canAskAgain`, porque `status` vale `'denied'` tanto después de la primera negativa (cuando Android todavía puede volver a preguntar) como cuando ya quedó bloqueado. Solo con `status` mostraría "Continuar" en un caso donde el diálogo nunca va a aparecer, y el botón no haría nada.
+Según ese estado, `ExplicacionPermiso.tsx` (línea 31) y `escanear.tsx` (líneas 48-65) muestran "Continuar" o "Abrir Ajustes". Miro `canAskAgain` porque `status` es `'denied'` en dos situaciones distintas: después de la primera negativa, cuando Android todavía muestra el diálogo, y cuando ya lo bloqueó. Si me guiara solo por `status`, mostraría "Continuar" cuando el sistema ya no va a preguntar, y tocarlo no haría nada.
 
-**c) Quién se entera de la vuelta desde Ajustes:** `useRevisarAlVolver` (`src/hooks/useRevisarAlVolver.ts`, líneas 10-16), que escucha `AppState` y vuelve a consultar el permiso cuando la app pasa de segundo plano a `active`. Lo usa `usePermiso` (línea 21). Si no existiera, la app seguiría mostrando "Abrir Ajustes" aunque el permiso ya esté concedido, hasta salir de la pantalla y volver a entrar.
+**c)** Se entera `useRevisarAlVolver` (`src/hooks/useRevisarAlVolver.ts`, líneas 10-16): escucha `AppState` y, cuando la app vuelve a `active`, consulta el permiso de nuevo. Lo usa `usePermiso` (línea 21). Sin esa parte, la persona volvería de Ajustes con la cámara habilitada y seguiría viendo "Abrir Ajustes", hasta salir del escáner y volver a entrar.
 
 ### D2. Notificaciones y consistencia
 
-**a)** Si no cancelara la notificación, a los 15 segundos llegaría "Acordate de devolver…" de un libro **que ya devolvió**: un aviso falso que hace desconfiar de la app. Por eso `devolver()` cancela la notificación programada (`src/context/biblioteca.tsx`, líneas 163-170). También la cancela `desactivarRecordatorio()` (líneas 196-202). Y si la persona desactiva el interruptor o devuelve el libro **mientras** se programaba, `activarRecordatorio()` la cancela apenas obtiene el id (líneas 183-188).
+**a)** Sin cancelarla, a los 15 segundos llegaría "Acordate de devolver…" de un libro **ya devuelto**: un recordatorio falso que hace perder confianza en los avisos de la app. Por eso `devolver()` cancela la programada (`src/context/biblioteca.tsx`, líneas 231-238), igual que `desactivarRecordatorio()` (líneas 264-270). También cubrí un caso borde: si la persona apaga el interruptor o devuelve el libro **mientras** la notificación se estaba programando, `activarRecordatorio()` la cancela apenas recibe el id (líneas 251-256).
 
-**b)** El identificador se guarda en el **estado del Context**, en el campo `idNotificacion` de cada préstamo (líneas 189 y 172-176). Ese estado vive en memoria.
+**b)** El identificador está en el campo `idNotificacion` de cada préstamo, en el estado del Context (línea 257), y la app lo **guarda con AsyncStorage** junto con los préstamos (líneas 132-146 y `src/lib/persistencia.ts`).
 
-Si la app se cierra antes de que llegue, **la notificación sigue programada en el sistema operativo y llega igual**. En cambio **el identificador se pierde**: al volver a abrir la app no hay préstamos en memoria ni forma de cancelar esa notificación. Queda un aviso "huérfano" que no se puede cancelar desde la app.
+Si la app se cierra antes de los 15 segundos, la notificación **sigue programada en el sistema y llega igual**. Si los datos estuvieran solo en memoria, el identificador se perdería: al reabrir no habría forma de cancelar ese recordatorio, y si el préstamo ya no existiera quedaría una notificación "huérfana".
 
-Lo resolvería persistiendo los préstamos con sus identificadores (por ejemplo con `@react-native-async-storage/async-storage`). Al iniciar, compararía con `Notifications.getAllScheduledNotificationsAsync()` y cancelaría las que no correspondan a un préstamo activo.
+Lo resolví en dos partes:
 
-**c)** En Android 13 o superior las notificaciones necesitan el permiso en tiempo de ejecución `POST_NOTIFICATIONS`, y el sistema asocia el diálogo a los canales de la app: si la app no tiene ningún canal, el pedido puede no mostrar el diálogo. Por eso `pedirPermisoNotificaciones()` crea el canal `prestamos` antes de pedir (`src/lib/notificaciones.ts`, líneas 33-36 y 20-27).
+- Los préstamos y sus identificadores se guardan y se recuperan al abrir la app (líneas 103-128), así que se pueden seguir cancelando.
+- Al arrancar, `cancelarRecordatoriosHuerfanos()` (`src/lib/notificaciones.ts`, líneas 64-79) compara las notificaciones programadas con los identificadores de los préstamos guardados y cancela las que no le corresponden a ninguno (línea 119 del Context).
 
-En Android 12 no existe ese permiso en tiempo de ejecución: las notificaciones están permitidas desde la instalación y el pedido devuelve `granted` sin mostrar diálogo. El canal igual hace falta (desde Android 8) para poder mostrarlas.
+**c)** Desde Android 13 mostrar notificaciones requiere el permiso en tiempo de ejecución `POST_NOTIFICATIONS`, y el sistema lo relaciona con los canales que la app creó: si la app todavía no tiene ninguno, el pedido puede terminar sin mostrar el diálogo. Por eso mi función de pedido primero crea el canal `prestamos` y recién después pide (`src/lib/notificaciones.ts`, líneas 20-27 y 33-36).
 
-**d)** Si el permiso está denegado, me entero por un **aviso dentro de la app**, que aparece arriba de "Mis reservas". El código que decide está en `avisarEntrega()` (`src/context/biblioteca.tsx`, líneas 229-240):
+En Android 12 ese permiso no existe: las notificaciones vienen habilitadas al instalar y el pedido devuelve `granted` sin preguntar nada. El canal sigue siendo necesario (es obligatorio desde Android 8) para que se muestren.
+
+**d)** Si el permiso está denegado, me entero por una **tarjeta dentro de la app**, arriba de "Mis reservas". Lo decide `avisarEntrega()` (`src/context/biblioteca.tsx`, líneas 297-308):
 
 ```ts
 if (await puedeNotificar()) {
@@ -230,19 +230,19 @@ if (await puedeNotificar()) {
 agregarAviso(`¡Ya podés retirar "${titulo}"! Lo tenés en tus préstamos.`);
 ```
 
-`puedeNotificar()` (`notificaciones.ts`, líneas 40-43) **consulta el permiso en ese momento** con `getPermissionsAsync()`, no usa un valor guardado. Importa porque la persona puede haber cambiado el permiso desde Ajustes después de la última consulta. Con un valor viejo, la app podría intentar notificar sin permiso, y el aviso se perdería, o mostrar el aviso interno aunque ya se pueda notificar.
+`puedeNotificar()` (`notificaciones.ts`, líneas 40-43) llama a `getPermissionsAsync()` **en ese mismo momento**, no lee un valor guardado antes. Es importante porque la persona puede haber cambiado el permiso en Ajustes desde la última vez que la app lo miró. Con un dato viejo, la app podría mandar una notificación que el sistema descarta, y el aviso se perdería, o mostrar la tarjeta cuando ya se podía notificar.
 
 ### D3. Lo que tu app pide y lo que no
 
-| Plataforma | Permiso o clave declarada | Función que lo justifica | ¿Quién lo agrega? |
-| ---------- | ------------------------- | ------------------------ | ----------------- |
-| Android | `android.permission.CAMERA` | Escáner de códigos de barras | `expo-camera` (manifiesto de la librería) |
+| Plataforma | Permiso o clave | Para qué lo usa la app | Quién lo agrega |
+| ---------- | --------------- | ---------------------- | --------------- |
+| Android | `android.permission.CAMERA` | Leer el código de barras del libro | El manifiesto de `expo-camera` |
 | Android | `android.permission.POST_NOTIFICATIONS` | Recordatorio de devolución y aviso de entrega | `expo-notifications` |
-| Android | `android.permission.RECEIVE_BOOT_COMPLETED` | Conservar las notificaciones programadas si se reinicia el teléfono | `expo-notifications` |
-| iOS | `NSCameraUsageDescription` ("Usamos tu cámara para leer el código de barras…") | Escáner | Plugin `expo-camera` con `cameraPermission` en `app.json` |
-| iOS | Notificaciones: no requieren clave en `Info.plist`, se piden en tiempo de ejecución | Recordatorios | `expo-notifications` |
+| Android | `android.permission.RECEIVE_BOOT_COMPLETED` | Que las notificaciones programadas sobrevivan a un reinicio del teléfono | `expo-notifications` |
+| iOS | `NSCameraUsageDescription` (el texto "Usamos tu cámara para leer el código de barras…") | Leer el código de barras | El plugin `expo-camera`, con `cameraPermission` de `app.json` |
+| iOS | Notificaciones: sin clave en `Info.plist`, se piden en tiempo de ejecución | Recordatorios | `expo-notifications` |
 
-**a)** `expo-camera` puede grabar video con sonido, por eso normalmente declara `RECORD_AUDIO` en Android y `NSMicrophoneUsageDescription` en iOS. Mi app solo lee códigos de barras, así que lo desactivé en `app.json`:
+**a)** `expo-camera` también sirve para grabar video con sonido, y por eso normalmente declara `RECORD_AUDIO` en Android y `NSMicrophoneUsageDescription` en iOS. Mi app solo lee códigos de barras, así que lo apagué en `app.json`:
 
 ```json
 ["expo-camera", {
@@ -253,18 +253,18 @@ agregarAviso(`¡Ya podés retirar "${titulo}"! Lo tenés en tus préstamos.`);
 }]
 ```
 
-Además `android.blockedPermissions` incluye `android.permission.RECORD_AUDIO`, que lo quita del manifiesto final aunque alguna librería lo agregue.
+Como refuerzo, `RECORD_AUDIO` está en `android.blockedPermissions`, que lo elimina del manifiesto final aunque alguna dependencia lo vuelva a agregar.
 
-**b)** Usaría `expo-image-picker` con `launchImageLibraryAsync`. En Android 13 o superior usa el selector de fotos del sistema y en iOS 14 o superior el `PHPicker`: **no necesita permiso**, porque la persona elige la foto en una pantalla del sistema y la app solo recibe la elegida. Igual hace falta una **build nueva**: `expo-image-picker` tiene código nativo, y una actualización OTA solo puede cambiar el JavaScript, no agregar módulos nativos. (En Expo Go funcionaría porque ya lo incluye.)
+**b)** Para elegir una portada de la galería, el paquete indicado es `expo-image-picker` y su función `launchImageLibraryAsync`. En Android 13 o superior abre el selector de fotos del sistema y en iOS 14 o superior el selector `PHPicker`. En los dos casos **no hace falta pedir permiso**: la persona elige en una pantalla del sistema y la app recibe únicamente esa foto. Igual requiere una **build nueva**: es un módulo con código nativo, y una actualización OTA solo reemplaza el JavaScript, no puede sumar código nativo. (En Expo Go andaría, porque ya viene incluido.)
 
-**c)** En Expo Go no pude verificar del todo:
+**c)** Lo que Expo Go no me deja comprobar del todo:
 
-- **El texto de propósito de la cámara:** el diálogo lo muestra Expo Go con su propio texto, porque el `Info.plist` es el de Expo Go.
-- **Que no se declare `RECORD_AUDIO` y que se apliquen los `blockedPermissions`:** el manifiesto es el de Expo Go, que declara muchos permisos.
+- **El texto de propósito de la cámara:** el diálogo sale con el texto de Expo Go, porque el `Info.plist` que se usa es el de Expo Go.
+- **Que falte `RECORD_AUDIO` y que se apliquen los `blockedPermissions`:** el manifiesto real es el de Expo Go, que declara muchísimos permisos.
 - **El ícono, el splash y el nombre de la app.**
-- **El canal `prestamos`:** aparece dentro de los ajustes de Expo Go, no de una app propia.
+- **El canal `prestamos`:** figura en los ajustes de notificaciones de Expo Go y no de una app "Biblioteca IPF".
 
-Pasa porque Expo Go es una app ya compilada, con su propia configuración nativa, y `app.json` solo se aplica al generar una build propia. Lo verificaría con una development build (`npx expo run:android`, o `eas build --profile development`) y revisando el manifiesto generado con `npx expo prebuild`.
+Todo eso pasa porque Expo Go ya viene compilado con su propia configuración nativa, y lo que escribo en `app.json` solo se aplica cuando se genera una build propia. La forma de comprobarlo es compilar la app con su propia configuración: generar las carpetas nativas con `npx expo prebuild` y leer el `AndroidManifest.xml` resultante, e instalar una build de desarrollo en el teléfono con `npx expo run:android` (o con EAS, perfil `development`).
 
 ---
 
@@ -272,35 +272,35 @@ Pasa porque Expo Go es una app ya compilada, con su propia configuración nativa
 
 ### E1. Revisión de código
 
-**a) Problemas encontrados**
+**a) Problemas**
 
-| Línea | Problema | Tipo | Por qué y cómo corregirlo |
-| ----- | -------- | ---- | ------------------------- |
-| 10, 22 | `any[]` y `libro: any` | Mala práctica | Se pierde el chequeo de tipos: un error de nombre (`libro.titlo`) recién falla en ejecución. Usar `Libro[]` y `{ libro: Libro }`. |
-| 11, 13-16 | Pide cámara y notificaciones **al abrir la app** | Mala práctica | Se piden sin contexto ni pantalla previa, antes de que la persona sepa para qué. Pedir la cámara al tocar "Escanear" (pasando por `/permisos/camara`) y las notificaciones al activar "Recordarme". |
-| 13-16 | Falta `pedirPermiso` en las dependencias y las promesas no se manejan | Advertencia | `react-hooks/exhaustive-deps` lo marca. Igual el efecto entero sobra (ver fila anterior). |
-| 18-20 | `useEffect` **sin array de dependencias** | Rendimiento / error de ejecución | Corre después de **cada** render y cada respuesta provoca otro render: un bucle infinito de pedidos (ver b). Usar `[]` o un contador para reintentar. |
-| 19 | Sin `catch` | Error de ejecución | `obtenerLibros()` falla 1 de cada 5 veces: promesa rechazada sin manejar y la persona no ve nada. Agregar `try/catch` y un estado de error con "Reintentar". |
-| 19 | Sin limpieza | Advertencia | Si la pantalla se desmonta o llega una respuesta vieja, igual se hace `setLibros`. Usar una bandera `cancelado` en la limpieza. |
-| 18-41 | No hay estado de carga, error ni vacío | Mala práctica | Durante 800 ms la pantalla está en blanco, y si falla queda en blanco para siempre. |
-| 22-30 | Componente `Fila` declarado **dentro** de `Catalogo` | Rendimiento | En cada render `Fila` es una función nueva: React la trata como otro tipo de componente y desmonta y vuelve a montar todas las filas. Moverlo a `src/components/FilaLibro.tsx`. |
-| 24 | `'/libro/' + libro.isbn` | Mala práctica | Arma la ruta como texto y pierde las rutas tipadas. Usar `{ pathname: '/libro/[isbn]', params: { isbn } }`. |
-| 25 | Estilo en línea y color fijo `'#333'` | Mala práctica | Se crea un objeto nuevo en cada render y el color no sale del tema. Usar `StyleSheet.create` y `Colores` de `tema.ts`. |
-| 33-36 | `ScrollView` con `map` | Rendimiento | Renderiza todos los libros juntos aunque no se vean. Usar `FlatList`. |
-| 35 | `key={i}` | Advertencia / error lógico | Si la lista cambia de orden, React asocia el estado de una fila con otro libro. Usar `keyExtractor={(libro) => libro.isbn}`. |
-| 37-39 | Botón con solo un ícono, sin `accessibilityRole` ni `accessibilityLabel`, de 28 × 28 | Mala práctica (accesibilidad) | Un lector de pantalla no sabe qué hace y el área táctil es menor a 44 × 44. Agregar `accessibilityRole="button"`, `accessibilityLabel="Escanear"` y tamaño mínimo. |
-| 11 | `permiso` declarado y nunca usado | Advertencia | El lint lo marca. Desaparece al sacar el pedido de permisos de esta pantalla. |
+| Línea | Problema | Tipo | Explicación y corrección |
+| ----- | -------- | ---- | ------------------------ |
+| 10, 22 | `any[]` y `libro: any` | Mala práctica | TypeScript deja de controlar esos datos: un error como `libro.titlo` recién aparece al ejecutar. Corrección: `Libro[]` y `{ libro: Libro }`. |
+| 11, 13-16 | Pide cámara y notificaciones apenas se abre el Catálogo | Mala práctica | La persona ve dos diálogos sin saber para qué. La cámara debería pedirse al tocar "Escanear", pasando antes por `/permisos/camara`, y las notificaciones al prender "Recordarme". |
+| 13-16 | Falta `pedirPermiso` en las dependencias y las promesas quedan sin manejar | Advertencia | `react-hooks/exhaustive-deps` lo señala. De todos modos, ese efecto entero hay que sacarlo (fila anterior). |
+| 18-20 | `useEffect` **sin dependencias** | Rendimiento / error de ejecución | Sin array, el efecto corre después de cada render. Cada respuesta provoca un render nuevo, y ese render otro pedido: un ciclo que no termina (ver b). Corrección: `[]`, o un contador para reintentar. |
+| 19 | No hay `catch` | Error de ejecución | La API falla una de cada cinco veces. El rechazo queda sin manejar y la pantalla no informa nada. Corrección: `try/catch` con un estado de error y el botón "Reintentar". |
+| 19 | No hay limpieza | Advertencia | Una respuesta que llega con la pantalla ya cerrada, o de un pedido anterior, igual actualiza el estado. Corrección: una bandera `cancelado` que la limpieza pone en `true`. |
+| 18-41 | Sin estados de carga, error y vacío | Mala práctica | Durante 800 ms no se ve nada, y si la API falla la pantalla queda en blanco para siempre. |
+| 22-30 | `Fila` declarado **adentro** de `Catalogo` | Rendimiento | Cada render de `Catalogo` crea una función `Fila` distinta. React la considera otro componente, así que desmonta las filas viejas y monta nuevas en cada render. Corrección: llevarlo a su propio archivo, como `src/components/FilaLibro.tsx`. |
+| 24 | `'/libro/' + libro.isbn` | Mala práctica | Al armar la ruta concatenando texto, las rutas tipadas no pueden revisarla. Corrección: pasar un objeto con `pathname: '/libro/[isbn]'` y el ISBN dentro de `params`, que el compilador sí puede revisar. |
+| 25 | Estilo escrito en línea con el color `'#333'` | Mala práctica | Cada render crea un objeto de estilo nuevo y el color queda fuera del tema. Corrección: pasarlo a `StyleSheet.create` y tomar el color de `Colores`. |
+| 33-36 | `ScrollView` que hace `map` de todos los libros | Rendimiento | Dibuja la lista completa de una vez aunque la mayoría no esté en pantalla. Corrección: `FlatList`, que solo dibuja lo visible. |
+| 35 | `key={i}` | Advertencia / error lógico | Si los libros cambian de lugar, React deja el estado de cada fila pegado a la posición y no al libro. Corrección: usar el ISBN como clave. |
+| 37-39 | Botón de solo ícono, de 28 × 28, sin `accessibilityRole` ni `accessibilityLabel` | Mala práctica (accesibilidad) | Con lector de pantalla no se sabe qué hace, y es más chico que el mínimo de 44 × 44 para tocarlo con el dedo. Corrección: rol, etiqueta y tamaño mínimo. |
+| 11 | `permiso` se declara y nunca se usa | Advertencia | El linter lo marca. Desaparece al sacar los pedidos de permiso de esta pantalla. |
 
-**b) El efecto sin dependencias durante el primer minuto:**
+**b) El primer minuto con el efecto sin dependencias:**
 
-1. Render 1 con `[]`. Después corre el efecto y llama a `obtenerLibros()`.
-2. A los 800 ms llega un array **nuevo** (cada respuesta trae copias). `setLibros` recibe una referencia distinta y React vuelve a renderizar.
-3. Después de ese render el efecto corre otra vez, porque no tiene dependencias, y hace otro pedido.
-4. Se repite cada ~800 ms: unos **75 pedidos por minuto**. Gasta batería y datos, y 1 de cada 5 falla sin `catch`, así que aparecen errores de promesas sin manejar.
+1. Primer render con la lista vacía. Termina y corre el efecto, que hace el primer pedido.
+2. A los 800 ms llega un array **distinto** del anterior, porque la API devuelve copias nuevas. `setLibros` recibe otra referencia, así que React vuelve a dibujar.
+3. Al terminar ese render el efecto corre de nuevo, porque no tiene dependencias que lo frenen, y pide otra vez.
+4. El ciclo se repite cada ~800 ms: alrededor de **75 pedidos en un minuto**. Gasta datos y batería, y una de cada cinco respuestas es un error que nadie atrapa.
 
-Si `obtenerLibros()` devolviera **siempre el mismo array**, el bucle se cortaría. En el segundo pedido `setLibros` recibiría la misma referencia que ya está en el estado, y React compara con `Object.is`: si es igual, no vuelve a renderizar, y sin render el efecto no vuelve a correr. Habría solo **2 pedidos**. El problema de fondo (que el efecto corre de más) sigue ahí: solo queda escondido.
+Si la API devolviera **el mismo array cada vez**, el ciclo se cortaría solo. En la segunda respuesta, `setLibros` recibiría la referencia que el estado ya tiene; React compara con `Object.is`, ve que no cambió y no dibuja. Sin render nuevo, el efecto no se vuelve a ejecutar, y quedarían **solo 2 pedidos**. Pero el defecto sigue ahí: solo dejaría de notarse.
 
-**c) Reescrita con los hooks, componentes y constantes de mi app** (es mi `src/app/(tabs)/(catalogo)/index.tsx`):
+**c) La pantalla reescrita** con lo que ya tiene mi app (es mi `src/app/(tabs)/(catalogo)/index.tsx`):
 
 ```tsx
 import { router } from 'expo-router';
@@ -355,15 +355,15 @@ const styles = StyleSheet.create({
 });
 ```
 
-El botón de escanear con ícono está en `AccesosCatalogo`, como un `Boton` con texto, `accessibilityRole` y 44 de alto mínimo. Los permisos ya no se piden acá.
+El acceso al escáner quedó en `AccesosCatalogo`: un `Boton` con ícono y texto, rol de botón y 44 de alto como mínimo. Esta pantalla ya no pide ningún permiso.
 
 **d)**
-- **Rechazo en una tienda:** pedir cámara y notificaciones **al abrir la app, sin contexto** (líneas 13-16). Apple exige que el pedido se entienda en el momento y que se explique el uso (guía 5.1.1), y Google Play revisa los permisos que no se justifican en el flujo de la app. Pedir notificaciones en un catálogo, sin motivo visible, es una señal clara.
-- **Lo que haría desinstalarla primero:** el **efecto sin dependencias**. Hace pedidos sin parar, gasta batería y datos, y si la red falla la pantalla queda en blanco sin explicación. Sumado a los dos diálogos de permisos apenas se abre, la primera impresión es mala.
+- **Lo que haría rechazar la app en una tienda:** los permisos pedidos **al iniciar y sin explicación** (líneas 13-16). Apple pide que cada permiso se solicite en el momento en que se usa y con un propósito claro (guía 5.1.1), y Google Play revisa que los permisos tengan relación con lo que la persona está haciendo. Notificaciones pedidas en un catálogo, sin ningún motivo a la vista, son una señal de alerta para el revisor.
+- **Lo que haría desinstalarla primero:** el **efecto sin dependencias**. La app consume datos y batería sin parar, y cuando la red falla queda en blanco sin explicar nada. Si a eso se le suman dos diálogos de permisos ni bien se abre, la primera experiencia es pésima.
 
 ### E2. Organización y acoplamiento
 
-**a) Quién importa a quién:**
+**a) Dependencias entre carpetas:**
 
 ```
 app ─────────► components, hooks, lib, constants, types
@@ -372,63 +372,63 @@ hooks ───────► context, lib, types
 context ─────► estructuras, lib, data, constants, types
 lib ─────────► data, constants, types
 data ────────► types
-estructuras ─► (nada)
-constants ───► lib (solo tipos: Recurso en constants/permisos.ts), types de expo-router
-types ───────► (nada)
+estructuras ─► (ninguna)
+constants ───► lib (solo el tipo Recurso, en constants/permisos.ts)
+types ───────► (ninguna)
 ```
 
-No hay importaciones "hacia arriba": ningún hook, componente ni archivo de `lib` importa algo de `src/app`. Sería un problema porque `src/app` son las rutas, los puntos de entrada. Si un hook dependiera de una pantalla, mover o renombrar una ruta (que cambia la URL) rompería código que no tiene nada que ver con la navegación. También se pueden formar ciclos de importación difíciles de seguir.
+Ningún archivo importa algo de `src/app`: las flechas van siempre desde las rutas hacia abajo. Si, por ejemplo, un hook importara una pantalla, renombrar o mover una ruta (cambiar una URL) rompería código que no tiene relación con la navegación, y además se pueden armar ciclos de imports difíciles de seguir.
 
-La única dependencia "lateral" a revisar es `constants/permisos.ts`, que importa el **tipo** `Recurso` de `lib/permisos.ts`. Es solo un tipo, pero podría moverse a `src/types`.
+El único cruce discutible es `constants/permisos.ts`, que importa de `lib/permisos.ts` el **tipo** `Recurso`. Al ser solo un tipo no genera código, pero estaría más prolijo en `src/types`.
 
-**b) Si el catálogo viniera de una API real**, cambiarían:
+**b) Si el catálogo viniera de una API real**, habría que tocar:
 
-1. `src/lib/api.ts`: `fetch` en lugar de la simulación.
-2. `src/lib/catalogo.ts`: `buscarPorIsbn` lee `LIBROS` en forma sincrónica.
-3. `src/data/libros.ts`: dejaría de existir, o quedaría solo `COLAS_AL_ABRIR`.
-4. Las pantallas que buscan un libro por ISBN en forma sincrónica (detalle, reserva, `ItemPrestamo`, `ItemEspera`, `ItemMostrador`) y `disponibles()` en el Context: pasarían a esperar datos y necesitarían estados de carga y error.
+1. `src/lib/api.ts`, que dejaría de simular y haría los pedidos HTTP.
+2. `src/lib/catalogo.ts`: hoy `buscarPorIsbn` busca en el array local al instante.
+3. `src/data/libros.ts`: sobrarían los libros y quedaría, a lo sumo, `COLAS_AL_ABRIR`.
+4. Todo lo que hoy busca un libro por ISBN de forma inmediata (el detalle, el modal de reserva, `ItemPrestamo`, `ItemEspera`, `ItemMostrador` y `disponibles()` del Context): pasaría a esperar una respuesta y necesitaría estados de carga y error.
 
-Son más de dos archivos. Eso dice que la búsqueda por ISBN quedó acoplada a que los datos estén en memoria al instante. Una mejora sería tener una sola fuente del catálogo (por ejemplo, guardar en el Context lo que trae `useLibros` y un hook `useLibro(isbn)`), así el cambio quedaría en `api.ts` y en ese hook.
+Son bastantes más de dos archivos. Eso muestra que muchas partes dan por hecho que el catálogo está en memoria y disponible ya. Para reducirlo centralizaría el catálogo en un solo lugar (por ejemplo, el Context guardando lo que trae `useLibros`, más un hook `useLibro(isbn)`), y un cambio de origen de datos tocaría solo `api.ts` y ese hook.
 
 **c) `<ConPermiso recurso="camara">…</ConPermiso>`**
 
-- **Ganaría:** menos código repetido y una forma declarativa de decir "esto necesita cámara".
-- **Perdería:** el componente decide qué mostrar en cada estado, y eso le quita flexibilidad a la pantalla. En mi escáner, el campo del ISBN a mano se ve **siempre**, en los cuatro estados, junto con la cámara o con el mensaje. También perdería la pantalla previa como **ruta** propia (`/permisos/camara`), que se puede abrir desde cualquier lugar.
-- **Para las notificaciones no sirve:** no se piden al abrir una pantalla, sino al **activar un interruptor** en un préstamo (`ItemPrestamo.tsx`, líneas 21-33). No hay nada que "envolver". Con `usePermiso`, la misma lógica de los cuatro estados sirve para los dos casos: el escáner muestra una cosa u otra, y el interruptor decide si programa el recordatorio o abre la pantalla previa.
+- **Lo que se gana:** menos repetición y una forma declarativa de decir "esto necesita la cámara".
+- **Lo que se pierde:** el componente decidiría qué se ve en cada estado, y la pantalla perdería control sobre eso. En mi escáner el campo para escribir el ISBN está **siempre**, en los cuatro estados, al lado de la cámara o del mensaje. También se perdería la pantalla previa como **ruta propia** (`/permisos/camara`), que se puede abrir desde cualquier parte.
+- **Para las notificaciones no sirve:** no dependen de abrir una pantalla, sino de **mover un interruptor** dentro de un préstamo (`src/components/ItemPrestamo.tsx`, líneas 21-33), y ahí no hay nada que envolver. Con `usePermiso`, los cuatro estados se calculan igual para los dos recursos, y cada lugar decide qué hacer con ellos: el escáner cambia lo que muestra y el interruptor programa el recordatorio o abre la pantalla previa.
 
 ### E3. Mapa de fallas
 
 | Situación | Qué ve la persona | Dónde se maneja |
 | --------- | ----------------- | --------------- |
-| `obtenerLibros()` falla | "No pudimos cargar el catálogo. Revisá tu conexión e intentá de nuevo." con botón "Reintentar" | `src/hooks/useLibros.ts:33-36`, `src/app/(tabs)/(catalogo)/index.tsx:34-42` |
-| Se abre `/libro/abc` | "abc no es un ISBN válido. Un ISBN tiene 13 números, sin guiones." con "Ir al Catálogo" | `src/app/(tabs)/(catalogo)/libro/[isbn].tsx:18, 27-36` |
-| Se escanea un ISBN que no está en el catálogo | Aviso "El código … no está en el catálogo…", una sola vez, y la cámara sigue activa | `src/app/(tabs)/(catalogo)/escanear.tsx:53-58` |
-| La cámara está bloqueada | Mensaje de cámara desactivada, "Abrir Ajustes" y el campo para escribir el ISBN | `escanear.tsx:92-102, 115`; `src/lib/permisos.ts:20` |
-| Las notificaciones están denegadas | En "Mis reservas", "Notificaciones desactivadas: los avisos te aparecen acá…"; los avisos de entrega aparecen como tarjetas dentro de la app | `src/context/biblioteca.tsx:229-240`; `src/components/ItemPrestamo.tsx:21-33`; `src/components/EstadoNotificaciones.tsx` |
-| Se intenta reservar un libro ya reservado | El detalle muestra "Ver mis reservas" en lugar de "Reservar"; si se llega al modal, "Ya reservaste este libro…" | `libro/[isbn].tsx:74-89`; `src/app/reservar/[isbn].tsx:23-33`; `biblioteca.tsx:149-151` |
-| "Entregar al siguiente" con la lista vacía | Los libros sin espera no aparecen en el mostrador; si igual pasara, "Nadie está esperando …" | `src/app/mostrador.tsx:20-22`; `biblioteca.tsx:213-218` (la `Cola` devuelve `undefined` sin romperse) |
-| Login con clave incorrecta | "Usuario o clave incorrectos. Revisalos e intentá de nuevo." | `src/app/login.tsx:29-30`; `biblioteca.tsx:99-106` |
+| `obtenerLibros()` falla | "No pudimos cargar el catálogo. Revisá tu conexión e intentá de nuevo." y el botón "Reintentar" | `src/hooks/useLibros.ts:33-36`; `src/app/(tabs)/(catalogo)/index.tsx:34-42` |
+| Se abre `/libro/abc` | Que "abc" no es un ISBN válido, que tiene que tener 13 números, y el botón "Ir al Catálogo" | `src/app/(tabs)/(catalogo)/libro/[isbn].tsx:18, 27-36` |
+| Se escanea un ISBN que no está | Un aviso con el código leído, una sola vez, y la cámara sigue leyendo | `src/hooks/useEscaner.ts:35-40` |
+| Cámara bloqueada | El mensaje de cámara desactivada, "Abrir Ajustes" y el campo para el ISBN | `escanear.tsx:55-65, 78`; `src/lib/permisos.ts:20` |
+| Notificaciones denegadas | En "Mis reservas": "Notificaciones desactivadas: los avisos te aparecen acá…"; las entregas llegan como tarjetas dentro de la app | `src/context/biblioteca.tsx:297-308`; `src/components/ItemPrestamo.tsx:21-33`; `src/components/EstadoNotificaciones.tsx` |
+| Reservar un libro ya reservado | En el detalle cambia "Reservar" por "Ver mis reservas"; si igual se llega al modal, dice que ya está reservado | `libro/[isbn].tsx:74-89`; `src/app/reservar/[isbn].tsx:23-33`; `biblioteca.tsx:217-219` |
+| "Entregar al siguiente" sin nadie esperando | El mostrador solo lista libros con espera; si se diera el caso, informa que nadie lo está esperando | `src/app/mostrador.tsx:20-22`; `biblioteca.tsx:281-286` (con la cola vacía `desencolar` devuelve `undefined`) |
+| Clave incorrecta en el login | "Usuario o clave incorrectos. Revisalos e intentá de nuevo.", que se borra al volver a escribir | `src/app/login.tsx:29-30`; `biblioteca.tsx:167-174` |
 
 ### E4. Decisiones con argumentos
 
-**a) Identificador: ISBN.**
-- **Es estable y único por edición:** dos ediciones del mismo título tienen ISBN distintos, así que se distinguen solas, que es lo correcto en una biblioteca (no es lo mismo prestar una edición que otra).
-- **Es lo que lee el escáner:** el EAN-13 de la contratapa es el ISBN, así que no hace falta traducir nada.
-- **Las URLs se entienden** (`/libro/9789870001010`).
-- **Funciona bien con `useLocalSearchParams`, que siempre devuelve texto** (lo vimos en el E1 del TP 2). Con un id numérico habría que convertirlo con `Number()` y controlar `NaN`, y `"007"` y `"7"` serían el mismo número. El ISBN ya es un `string` y se valida con una expresión regular (`src/lib/catalogo.ts`).
-- **La contra son los libros sin ISBN,** como ediciones viejas o materiales propios del instituto. Para esos haría falta un identificador propio. Si la biblioteca tuviera muchos, convendría un id interno y el ISBN como dato opcional.
+**a) Identificador: el ISBN.**
+- **Es único por edición:** dos ediciones del mismo título tienen ISBN distintos, y en una biblioteca eso es lo que conviene, porque no es lo mismo prestar una edición que otra.
+- **Es lo que ya trae el libro:** el código de barras de la contratapa (EAN-13) es el ISBN, así que el escáner lo usa directo, sin traducciones.
+- **Las URLs se entienden solas:** `/libro/9789870001010`.
+- **Encaja con `useLocalSearchParams`, que siempre entrega texto** (el ejercicio E1 del TP 2). Un id numérico habría que convertirlo con `Number()` y controlar `NaN`, y además `"007"` y `"7"` serían el mismo valor. El ISBN se queda como `string` y lo valido con una expresión regular (`src/lib/catalogo.ts`).
+- **La desventaja son los materiales sin ISBN,** como libros antiguos o apuntes propios del instituto. Si fueran muchos, convendría un id interno y el ISBN como dato opcional.
 
 **b) Estructuras: clase `Pila` con `#items`.**
-- **Lo que me dio la clase:** encapsulamiento (desde afuera no se puede tocar el arreglo, solo `apilar`, `desapilar` y `tope`), una API con nombres del dominio, la `Cola` sin `shift()` con el frente y el final escondidos, y la posibilidad de probarla aislada (`src/estructuras/__tests__`).
-- **Lo que me complicó:** React compara el estado por referencia, y la clase está pensada para **mutarse**. Tuve que acordarme de crear siempre una instancia nueva (`new Pila(anterior.aArray())`, `src/context/biblioteca.tsx:93`). Si en algún lugar se muta la instancia que está en el estado, aparece el error de B3.
-- **La alternativa:** con un array y `[...pila, x]` / `slice`, la inmutabilidad viene "gratis", pero la regla "último en entrar, primero en salir" queda repartida por el código.
+- **Lo que me dio:** el arreglo queda protegido (solo se usa con `apilar`, `desapilar` y `tope`), los nombres hablan del problema y no de arrays, la `Cola` resuelve el frente sin `shift()` sin que nadie de afuera lo sepa, y las clases se pueden probar solas (`src/estructuras/__tests__`, 12 casos).
+- **Lo que me complicó:** React detecta cambios comparando referencias, mientras que la clase está pensada para modificarse por dentro. Tuve que crear siempre una instancia nueva antes de cambiarla (`src/context/biblioteca.tsx:161`), y para guardarla en AsyncStorage la convierto a array con `aArray()` y la reconstruyo al leerla. Si en algún lugar se modificara la instancia guardada en el estado, volvería el error de B3.
+- **Con un array y `[...pila, x]` / `slice`,** la inmutabilidad viene sola, pero la regla "el último que entra sale primero" queda repartida por todo el código.
 
-**c) Memorización.** No escribí `useMemo` ni `useCallback` a mano en los componentes, porque el proyecto tiene activado el **React Compiler** (`"reactCompiler": true` en `app.json`), que memoriza automáticamente.
+**c) Memorización.** No agregué `useMemo` ni `useCallback` a mano en los componentes porque el proyecto tiene el **React Compiler** activado (`"reactCompiler": true` en `app.json`), que hace esa memorización por su cuenta.
 
-- **Donde aportan:** el `value` del Context. Sin memorizar es un objeto nuevo en cada render del provider, y eso hace re-renderizar a todos los consumidores. Otro caso es `usePermiso` (`src/hooks/usePermiso.ts:16-18`), donde **sí** uso `useCallback`: `useFocusEffect` vuelve a ejecutarse si cambia la función que recibe, y con una función nueva en cada render consultaría el permiso de más.
-- **Donde serían ruido:** `useMemo` para calcular `recientes` (3 elementos) o para `esIsbnValido`: el cálculo es más barato que la propia memorización.
-- **Cómo lo comprobaría:** con el **Profiler de React DevTools** (o "Highlight updates"), midiendo cuántas veces y cuánto tarda en renderizar cada componente antes y después del cambio, en lugar de suponerlo.
+- **Dónde sí importa:** el `value` del Context. Sin memorizar, es un objeto nuevo en cada render del provider y obliga a dibujar de nuevo a todos los consumidores. Hay un lugar donde lo escribí explícitamente: `usePermiso` (`src/hooks/usePermiso.ts:16-18`). Ahí `useCallback` es necesario, porque `useFocusEffect` vuelve a ejecutarse si la función cambia, y sin él consultaría el permiso en cada render.
+- **Dónde sería ruido:** memorizar `recientes` (tres elementos) o el resultado de `esIsbnValido`. Calcularlos cuesta menos que guardar y comparar la memoria.
+- **Cómo lo comprobaría:** midiendo con el **Profiler de React DevTools**, o activando "Highlight updates", cuántas veces y cuánto tarda en dibujarse cada componente antes y después del cambio, en vez de asumirlo.
 
-**d) Datos duplicados.** Los "ejemplares disponibles" **se calculan**, no se guardan: `disponibles()` (`src/context/biblioteca.tsx:112-121`) parte de los ejemplares del estante inicial, resta los préstamos activos y suma los ejemplares devueltos que se entregaron desde el mostrador.
+**d) Datos duplicados.** Los "ejemplares disponibles" **se calculan**: `disponibles()` (`src/context/biblioteca.tsx:180-189`) toma los ejemplares iniciales del estante, les resta los préstamos activos y les suma los ejemplares devueltos que se entregaron desde el mostrador.
 
-Si el número viviera en dos lugares (un contador en el estado además de la lista de préstamos), cada acción tendría que actualizar los dos. Bastaría que `devolver` se olvidara de sumar 1 para que el detalle mostrara "0 disponibles" con el libro en el estante. O peor, "2 disponibles" cuando ya están todos prestados. Al calcularlo, hay una sola fuente de verdad y el número no puede quedar desincronizado.
+Si tuviera además un contador propio, cada acción tendría que actualizar dos cosas. Basta con que `devolver` se olvide de sumar uno para que el detalle diga "0 disponibles" con el libro en el estante, o al revés, "2 disponibles" cuando ya no queda ninguno. Al calcularlo hay una sola fuente de verdad, y el número no puede contradecir a la lista de préstamos.
