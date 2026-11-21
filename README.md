@@ -69,8 +69,8 @@ detalle con `router.replace` dentro del mismo navegador: al tocar "atrás" se vu
 | ----------------- | ------------------------------------------------------------------- |
 | `src/app`         | Solo rutas                                                          |
 | `src/components`  | Un componente por archivo                                           |
-| `src/hooks`       | `useLibros`, `usePermiso`, `useRevisarAlVolver`, `useBiblioteca`, … |
-| `src/lib`         | API simulada, catálogo, fechas, permisos, notificaciones, navegación |
+| `src/hooks`       | `useLibros`, `useBusquedaLibros`, `useEscaner`, `usePermiso`, `useRevisarAlVolver`, `useBiblioteca`, … |
+| `src/lib`         | API simulada, catálogo, fechas, permisos, notificaciones, persistencia, navegación |
 | `src/context`     | `BibliotecaProvider`: préstamos, listas de espera, recientes, sesión y avisos |
 | `src/estructuras` | `Pila` y `Cola` con `#items`, `tamanio` y `aArray()` (Cola sin `shift()`) + tests |
 | `src/data`        | `libros.ts` y listas de espera iniciales                            |
@@ -164,11 +164,26 @@ adb shell am start -a android.intent.action.VIEW -d "exp://192.168.0.10:8081/--/
 
 ## Datos de prueba
 
-`src/data/libros.ts` tiene el catálogo. *Rayuela*, *Cien años de soledad* y *Código limpio* no tienen
-ejemplares; *Rayuela* (2 personas) y *Código limpio* (1 persona) ya tienen lista de espera.
+`src/data/libros.ts` tiene el catálogo de 15 libros. Dos tienen el ISBN real de su contratapa, para
+probar el escáner con el libro o con una imagen de su código de barras:
+
+| Libro | ISBN |
+| ----- | ---- |
+| *The C Programming Language* (Kernighan y Ritchie, 1988) | 9780131103627 |
+| *JavaScript: The Definitive Guide* (Flanagan, 2020) | 9781491952023 |
+
+*Rayuela*, *Cien años de soledad*, *Código limpio* y *JavaScript: The Definitive Guide* no tienen
+ejemplares; *Rayuela* (2 personas) y *Código limpio* (1 persona) ya tienen lista de espera
+(`COLAS_AL_ABRIR`).
 
 ## Desafíos opcionales hechos
 
+- **Persistencia:** los préstamos (con el id de su notificación), las listas de espera y los vistos
+  recientemente se guardan con `@react-native-async-storage/async-storage` (`src/lib/persistencia.ts`).
+  Al abrir la app el splash del escudo sigue visible hasta que se recuperan, así nunca se ve la app
+  vacía. Lo leído se valida antes de usarlo y, si está roto, la app arranca de cero. Además se
+  cancelan las notificaciones programadas que ya no corresponden a ningún préstamo. La sesión del
+  personal no se guarda a propósito.
 - **Tests:** 12 casos de `Pila` y `Cola` con `jest-expo` (incluye desencolar una cola vacía): `npm test`.
 - **Debounce:** el buscador espera 300 ms sin escribir antes de llamar a `buscarLibros`, con limpieza del temporizador.
 
